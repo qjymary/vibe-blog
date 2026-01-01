@@ -307,11 +307,20 @@ banana-blog/
 │       ├── llm_service.py                # LLM 服务封装
 │       ├── image_service.py              # 图片生成服务 (Nano Banana)
 │       ├── task_service.py               # SSE 任务管理
+│       ├── database_service.py           # 数据库服务
+│       ├── file_parser_service.py        # 文件解析服务 (PDF/MD/TXT)
+│       ├── knowledge_service.py          # 知识管理服务
+│       ├── pipeline_service.py           # 流水线服务
+│       ├── transform_service.py          # 转换服务
+│       ├── prompts/                      # 服务层 Prompt 模板
+│       │   ├── document_summary.j2       # 文档摘要 Prompt
+│       │   └── image_caption.j2          # 图片描述 Prompt
 │       └── blog_generator/               # 博客生成器核心
 │           ├── blog_service.py           # 博客生成服务入口
 │           ├── generator.py              # LangGraph 工作流定义
-│           ├── agents/                   # 8 个 Agent 实现
+│           ├── agents/                   # 9 个 Agent 实现
 │           │   ├── researcher.py         # 调研 Agent - 联网搜索
+│           │   ├── search_coordinator.py # 搜索协调 Agent - 多轮搜索
 │           │   ├── planner.py            # 规划 Agent - 大纲生成
 │           │   ├── writer.py             # 写作 Agent - 内容撰写
 │           │   ├── questioner.py         # 追问 Agent - 深度检查
@@ -323,10 +332,18 @@ banana-blog/
 │           │   ├── researcher.j2         # 调研 Prompt
 │           │   ├── planner.j2            # 规划 Prompt
 │           │   ├── writer.j2             # 写作 Prompt
+│           │   ├── writer_enhance.j2     # 写作增强 Prompt
+│           │   ├── writer_enhance_knowledge.j2  # 知识增强写作 Prompt
 │           │   ├── questioner.j2         # 追问 Prompt
 │           │   ├── coder.j2              # 代码 Prompt
 │           │   ├── artist.j2             # 配图 Prompt
-│           │   └── reviewer.j2           # 审核 Prompt
+│           │   ├── cover_image_prompt.j2 # 封面图 Prompt
+│           │   ├── reviewer.j2           # 审核 Prompt
+│           │   ├── search_query.j2       # 搜索查询 Prompt
+│           │   ├── search_summarizer.j2  # 搜索摘要 Prompt
+│           │   ├── knowledge_gap_detector.j2  # 知识缺口检测 Prompt
+│           │   ├── assembler_header.j2   # 组装头部 Prompt
+│           │   └── assembler_footer.j2   # 组装尾部 Prompt
 │           ├── prompts/
 │           │   └── prompt_manager.py     # Prompt 渲染管理
 │           ├── schemas/
