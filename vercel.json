@@ -1,4 +1,10 @@
 {
   "buildCommand": "pip install -r backend/requirements.txt",
-  "framework": "python"
+  "framework": "python",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api/index.py"
+    }
+  ]
 }
