@@ -92,7 +92,14 @@ def create_app(config_class=None):
     mineru_token = app.config.get('MINERU_TOKEN', '')
     if mineru_token:
         upload_folder = os.path.join(os.path.dirname(__file__), 'uploads')
-        os.makedirs(upload_folder, exist_ok=True)
+        try:
+            os.makedirs(upload_folder, exist_ok=True)
+        except (OSError, IOError):
+            # Vercel 环境是只读的，无法创建目录，使用临时目录
+            import tempfile
+            upload_folder = tempfile.gettempdir()
+            logger.warning(f"无法创建 uploads 目录，使用临时目录: {upload_folder}")
+        
         init_file_parser(
             mineru_token=mineru_token,
             mineru_api_base=app.config.get('MINERU_API_BASE', 'https://mineru.net'),
