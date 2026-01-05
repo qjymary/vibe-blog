@@ -1,5 +1,5 @@
 """
-博客生成服务 - 封装 BlogGenerator，提供与 Banana Vibe Blog 集成的接口
+博客生成服务 - 封装 BlogGenerator，提供与 vibe-blog 集成的接口
 """
 
 import logging
@@ -26,7 +26,7 @@ _blog_service: Optional['BlogService'] = None
 
 class BlogService:
     """
-    博客生成服务 - 与 Banana Vibe Blog 任务管理系统集成
+    博客生成服务 - 与 vibe-blog 任务管理系统集成
     """
     
     def __init__(self, llm_client, search_service=None, knowledge_service=None):

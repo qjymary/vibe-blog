@@ -1,6 +1,6 @@
 <div align="center">
 
-<img width="256" src="./logo/banana-vibe-blog.png">
+<img width="256" src="./logo/vibe-blog.png">
 
 *Turn complex tech into stories everyone can understand.*
 
@@ -8,7 +8,7 @@
 
 <p>
 
-[![Version](https://img.shields.io/badge/version-v0.1.0-4CAF50.svg)](https://github.com/lailoo/banana-vibe-blog)
+[![Version](https://img.shields.io/badge/version-v0.1.0-4CAF50.svg)](https://github.com/datawhalechina/vibe-blog)
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)
 ![Flask](https://img.shields.io/badge/Flask-3.0-000000?logo=flask&logoColor=white)
 
@@ -40,7 +40,7 @@ Traditional technical blog writing has the following pain points:
 - 4️⃣ **Single audience**: Difficult to adjust content depth for readers of different technical levels
 - 5️⃣ **Tedious distribution**: Need to manually adapt to different platform format requirements
 
-Banana Vibe Blog was born to solve these problems. Based on multi-Agent collaborative architecture, it automatically completes the entire process of research, planning, writing, and illustration, letting you focus on the knowledge itself.
+vibe-blog was born to solve these problems. Based on multi-Agent collaborative architecture, it automatically completes the entire process of research, planning, writing, and illustration, letting you focus on the knowledge itself.
 
 ## 👨‍💻 Use Cases
 
@@ -203,7 +203,7 @@ All Agents share unified state management and Prompt template library, ensuring 
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/lailoo/banana-vibe-blog
+git clone https://github.com/datawhalechina/vibe-blog
 ```
 
 2. **Install dependencies**
@@ -357,9 +357,9 @@ banana-blog/
 ## 🤝 Contributing
 
 Welcome to contribute to this project through
-[Issue](https://github.com/lailoo/banana-vibe-blog/issues)
+[Issue](https://github.com/datawhalechina/vibe-blog/issues)
 and
-[Pull Request](https://github.com/lailoo/banana-vibe-blog/pulls)!
+[Pull Request](https://github.com/datawhalechina/vibe-blog/pulls)!
 
 
 ## 📄 License

@@ -1,5 +1,5 @@
 """
-Banana Vibe Blog 服务模块
+vibe-blog 服务模块
 """
 from .llm_service import LLMService, get_llm_service, init_llm_service
 from .transform_service import TransformService, create_transform_service

@@ -1,5 +1,5 @@
 """
-Banana Vibe Blog 后端应用入口
+vibe-blog 后端应用入口
 技术科普绘本生成器
 """
 import os
@@ -133,7 +133,7 @@ def create_app(config_class=None):
     </style>
 </head>
 <body>
-    <h1>🍌 Banana Vibe Blog</h1>
+    <h1>🍌 vibe-blog</h1>
     <p>技术科普绘本生成器 - 让复杂技术变得人人都能懂</p>
     
     <h2>API 端点</h2>

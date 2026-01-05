@@ -1,3 +1,3 @@
 """
-Banana Vibe Blog 测试模块
+vibe-blog 测试模块
 """
