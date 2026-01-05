@@ -1524,7 +1524,12 @@
         }
         
         // 页面加载时获取历史记录
-        document.addEventListener('DOMContentLoaded', loadHistory);
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadHistory);
+        } else {
+            // DOM 已经加载完成，直接执行
+            loadHistory();
+        }
     </script>
 </body>
 </html>
