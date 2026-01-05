@@ -25,10 +25,6 @@ from services.file_parser_service import get_file_parser, init_file_parser
 from services.knowledge_service import get_knowledge_service, init_knowledge_service
 
 # 配置日志
-LOG_DIR = os.path.join(os.path.dirname(__file__), 'logs')
-os.makedirs(LOG_DIR, exist_ok=True)
-LOG_FILE = os.path.join(LOG_DIR, 'app.log')
-
 log_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 root_logger = logging.getLogger()
@@ -39,10 +35,18 @@ console_handler.setLevel(logging.INFO)
 console_handler.setFormatter(log_format)
 root_logger.addHandler(console_handler)
 
-file_handler = logging.FileHandler(LOG_FILE, encoding='utf-8')
-file_handler.setLevel(logging.DEBUG)
-file_handler.setFormatter(log_format)
-root_logger.addHandler(file_handler)
+# 尝试配置文件日志，如果失败则跳过（Vercel 环境是只读的）
+try:
+    LOG_DIR = os.path.join(os.path.dirname(__file__), 'logs')
+    os.makedirs(LOG_DIR, exist_ok=True)
+    LOG_FILE = os.path.join(LOG_DIR, 'app.log')
+    file_handler = logging.FileHandler(LOG_FILE, encoding='utf-8')
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(log_format)
+    root_logger.addHandler(file_handler)
+except (OSError, IOError):
+    # Vercel 环境是只读的，无法创建日志文件，仅使用控制台日志
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -63,9 +67,13 @@ def create_app(config_class=None):
     # CORS
     CORS(app, origins=app.config.get('CORS_ORIGINS', ['*']))
     
-    # 确保目录存在
-    os.makedirs(app.config.get('OUTPUT_FOLDER', 'outputs'), exist_ok=True)
-    os.makedirs(os.path.join(app.config.get('OUTPUT_FOLDER', 'outputs'), 'images'), exist_ok=True)
+    # 确保目录存在（Vercel 环境可能是只读的，所以使用 try-except）
+    try:
+        os.makedirs(app.config.get('OUTPUT_FOLDER', 'outputs'), exist_ok=True)
+        os.makedirs(os.path.join(app.config.get('OUTPUT_FOLDER', 'outputs'), 'images'), exist_ok=True)
+    except (OSError, IOError):
+        # Vercel 环境是只读的，无法创建目录，继续运行
+        pass
     
     # 初始化 LLM 服务
     init_llm_service(app.config)
