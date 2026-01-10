@@ -68,6 +68,10 @@ class PromptManager:
         """渲染可读性检测 Prompt"""
         return self.render("readability_check", content=content, metrics=metrics or {})
     
+    def render_questioner(self, content: str, content_type: str = "tutorial", context: Dict = None) -> str:
+        """渲染追问检查 Prompt"""
+        return self.render("questioner", content=content, content_type=content_type, context=context or {})
+    
     def render_improvement(
         self, 
         content: str, 

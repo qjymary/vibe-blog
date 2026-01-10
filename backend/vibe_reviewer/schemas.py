@@ -149,7 +149,9 @@ class ContentIssue:
     location: str                       # 问题位置
     description: str                    # 问题描述
     suggestion: str                     # 修改建议
+    original_text: str = ""             # 原文文本（用于精确定位）
     reference: Optional[str] = None     # 参考资料来源
+    category: str = ""                  # 问题分类（questioner/depth/quality/readability）
 
 
 @dataclass

@@ -29,6 +29,7 @@ from .pipeline.analyzer import ContentAnalyzer
 from .pipeline.search_agent import SearchAgent
 from .pipeline.reference_manager import ReferenceManager
 from .pipeline.score_aggregator import ScoreAggregator
+from .agents.questioner import Questioner
 from .agents.depth_checker import DepthChecker
 from .agents.quality_reviewer import QualityReviewer
 from .agents.readability_checker import ReadabilityChecker
@@ -308,6 +309,7 @@ class ReviewerService:
             analyzer = ContentAnalyzer(self.llm_service) if self.llm_service else None
             search_agent = SearchAgent(self.search_service)
             ref_manager = ReferenceManager(self.llm_service)
+            questioner = Questioner(self.llm_service) if self.llm_service else None
             depth_checker = DepthChecker(self.llm_service) if self.llm_service else None
             quality_reviewer = QualityReviewer(self.llm_service) if self.llm_service else None
             readability_checker = ReadabilityChecker(self.llm_service) if self.llm_service else None
@@ -321,9 +323,45 @@ class ReviewerService:
             low_issues = 0
             total_score = 0
             
+            # ========== Step 4.0: 生成章节摘要（用于上下文连贯性检测）==========
+            emit("log", level="info", message="📝 正在生成章节摘要...")
+            chapter_summaries = []
+            for idx, chapter in enumerate(chapters_to_evaluate):
+                # 使用 LLM 生成简短摘要
+                if self.llm_service:
+                    try:
+                        summary_prompt = f"请用1-2句话概括以下内容的核心主题和要点（不超过100字）：\n\n{chapter['content'][:2000]}"
+                        chapter_summary = self.llm_service.chat(
+                            messages=[{"role": "user", "content": summary_prompt}]
+                        )
+                        chapter_summaries.append({
+                            'title': chapter['title'] or chapter['file_path'],
+                            'summary': chapter_summary[:200] if chapter_summary else ''
+                        })
+                    except Exception as e:
+                        logger.warning(f"生成章节摘要失败: {e}")
+                        chapter_summaries.append({
+                            'title': chapter['title'] or chapter['file_path'],
+                            'summary': ''
+                        })
+                else:
+                    chapter_summaries.append({
+                        'title': chapter['title'] or chapter['file_path'],
+                        'summary': ''
+                    })
+            emit("log", level="success", message=f"✅ 章节摘要生成完成: {len(chapter_summaries)} 个")
+            
             for idx, chapter in enumerate(chapters_to_evaluate):
                 chapter_id = chapter['id']
                 content = chapter['content']
+                
+                # 构建上下文信息（前一章和后一章的摘要）
+                context = {
+                    'prev_chapter': chapter_summaries[idx - 1] if idx > 0 else None,
+                    'next_chapter': chapter_summaries[idx + 1] if idx < len(chapter_summaries) - 1 else None,
+                    'chapter_index': idx + 1,
+                    'total_chapters': len(chapters_to_evaluate),
+                }
                 
                 emit("chapter_start", 
                      chapter_id=chapter_id, 
@@ -358,7 +396,15 @@ class ReviewerService:
                              results_count=len(references))
                         emit("log", level="info", message=f"   ✓ 搜索完成: 找到 {len(references)} 条相关参考")
                     
-                    # 4.3 深度检查
+                    # 4.3 追问检查（发现模糊点和遗漏，包含上下文连贯性检测）
+                    emit("log", level="info", message="   ❓ 正在进行追问检查...")
+                    emit("chapter_step", chapter_id=chapter_id, step="question", status="start")
+                    question_result = questioner.question(content, context=context) if questioner else None
+                    emit("chapter_step", chapter_id=chapter_id, step="question", status="complete")
+                    if question_result:
+                        emit("log", level="info", message=f"   ✓ 追问检查完成: 评分={question_result.get('score', 70)}, 模糊点={len(question_result.get('issues', []))}")
+                    
+                    # 4.4 深度检查
                     emit("log", level="info", message="   📊 正在进行深度检查...")
                     emit("chapter_step", chapter_id=chapter_id, step="depth", status="start")
                     depth_result = depth_checker.check(content, references) if depth_checker else None
@@ -402,6 +448,21 @@ class ReviewerService:
                     
                     # 4.8 统计问题
                     chapter_issues = []
+                    
+                    # 追问检查的问题
+                    if question_result:
+                        for issue in question_result.get('issues', []):
+                            chapter_issues.append({
+                                'category': 'questioner',
+                                'issue_type': issue.issue_type if hasattr(issue, 'issue_type') else 'vague_claim',
+                                'severity': issue.severity if hasattr(issue, 'severity') else 'medium',
+                                'location': issue.location if hasattr(issue, 'location') else '',
+                                'original_text': issue.original_text if hasattr(issue, 'original_text') else '',
+                                'description': issue.description if hasattr(issue, 'description') else '',
+                                'suggestion': issue.suggestion if hasattr(issue, 'suggestion') else '',
+                            })
+                    
+                    # 深度检查的问题
                     if depth_result:
                         for vp in depth_result.vague_points:
                             chapter_issues.append({
@@ -409,6 +470,7 @@ class ReviewerService:
                                 'issue_type': 'vague_claim',
                                 'severity': 'medium',
                                 'location': vp.location,
+                                'original_text': vp.original_text if hasattr(vp, 'original_text') else '',
                                 'description': vp.issue,
                                 'suggestion': vp.suggestion,
                             })
@@ -420,6 +482,7 @@ class ReviewerService:
                                 'issue_type': issue.issue_type,
                                 'severity': issue.severity,
                                 'location': issue.location,
+                                'original_text': issue.original_text if hasattr(issue, 'original_text') else '',
                                 'description': issue.description,
                                 'suggestion': issue.suggestion,
                                 'reference': issue.reference,
@@ -432,6 +495,7 @@ class ReviewerService:
                                 'issue_type': issue.issue_type,
                                 'severity': issue.severity,
                                 'location': issue.location,
+                                'original_text': issue.original_text if hasattr(issue, 'original_text') else '',
                                 'description': issue.description,
                                 'suggestion': issue.suggestion,
                             })
