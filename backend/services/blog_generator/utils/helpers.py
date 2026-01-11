@@ -176,7 +176,8 @@ def replace_placeholders(
         output_block = f"```\n{output_content}\n```"
         
         replacement = f"{code_block}\n\n#### OUTPUT\n{output_block}\n\n{code.get('explanation', '')}"
-        result = re.sub(pattern, replacement, result)
+        # 使用 lambda 避免替换字符串中的反斜杠被解释为转义序列
+        result = re.sub(pattern, lambda m: replacement, result)
     
     # 替换图片占位符 [IMAGE: xxx - description]
     image_pattern = r'\[IMAGE:\s*[^\]]+\]'

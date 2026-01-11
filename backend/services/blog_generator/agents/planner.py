@@ -78,6 +78,7 @@ class PlannerAgent:
                     on_chunk=on_chunk
                 )
             else:
+                logger.info("使用普通生成大纲")
                 response = self.llm.chat(
                     messages=[{"role": "user", "content": prompt}],
                     response_format={"type": "json_object"}
