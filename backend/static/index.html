@@ -635,6 +635,7 @@
                     border: none; cursor: pointer;
                     display: flex; align-items: center; justify-content: center;
                     transition: all 0.2s; box-shadow: 0 2px 8px rgba(78,205,196,0.3);
+                    flex-shrink: 0;
                 " title="生成博客">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5">
                         <path d="M12 19V5M5 12l7-7 7 7"/>
@@ -1144,7 +1145,10 @@
             btn.disabled = false;
             btn.style.opacity = '1';
             btn.style.cursor = 'pointer';
-            btn.textContent = '✨ 生成博客';
+            btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5">
+                <path d="M12 19V5M5 12l7-7 7 7"/>
+            </svg>`;
+            btn.title = '生成博客';
         }
 
         // 添加进度项
@@ -1383,11 +1387,14 @@
                 return;
             }
 
-            // 禁用按钮
+            // 禁用按钮，显示加载动画
             btn.disabled = true;
-            btn.style.opacity = '0.5';
+            btn.style.opacity = '0.7';
             btn.style.cursor = 'not-allowed';
-            btn.textContent = '⏳ 生成中...';
+            btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" style="animation: spin 1s linear infinite;">
+                <circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="32"/>
+            </svg>`;
+            btn.title = '生成中...';
 
             // 显示进度面板
             const progressPanel = document.getElementById('progressPanel');
@@ -1648,8 +1655,12 @@
             let processedMarkdown = markdown.replace(/\]\(\.\/images\//g, '](/outputs/images/');
             
             // 预处理：确保分割线 --- 前后有空行（避免被解析为标题）
-            processedMarkdown = processedMarkdown.replace(/([^\n])\n---/g, '$1\n\n---');
-            processedMarkdown = processedMarkdown.replace(/---\n([^\n])/g, '---\n\n$1');
+            // 处理 ---# 紧跟的情况（没有换行）
+            processedMarkdown = processedMarkdown.replace(/(-{3,})([#])/g, '$1\n\n$2');
+            // 处理 X--- 前面紧跟字符的情况
+            processedMarkdown = processedMarkdown.replace(/([^\n])(-{3,})/g, '$1\n\n$2');
+            // 处理 ---\nX 后面只有一个换行的情况
+            processedMarkdown = processedMarkdown.replace(/(-{3,})\n([^\n])/g, '$1\n\n$2');
             
             // 配置 marked
             marked.setOptions({

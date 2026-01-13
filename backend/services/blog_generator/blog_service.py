@@ -814,13 +814,13 @@ class LLMClientAdapter:
         
         Args:
             messages: 消息列表
-            response_format: 响应格式 (可选)
+            response_format: 响应格式 (可选)，如 {"type": "json_object"}
             
         Returns:
             LLM 响应文本
         """
-        # 直接调用 LLMService 的 chat 方法
-        result = self.llm_service.chat(messages)
+        # 直接调用 LLMService 的 chat 方法，传递 response_format
+        result = self.llm_service.chat(messages, response_format=response_format)
         
         if result:
             return result

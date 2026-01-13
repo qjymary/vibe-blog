@@ -179,6 +179,10 @@ def replace_placeholders(
         # 使用 lambda 避免替换字符串中的反斜杠被解释为转义序列
         result = re.sub(pattern, lambda m: replacement, result)
     
+    # 清理未被替换的代码占位符（代码生成失败的情况）
+    remaining_code_pattern = r'\[CODE:\s*[^\]]+\]'
+    result = re.sub(remaining_code_pattern, '', result)
+    
     # 替换图片占位符 [IMAGE: xxx - description]
     image_pattern = r'\[IMAGE:\s*[^\]]+\]'
     image_matches = list(re.finditer(image_pattern, result))

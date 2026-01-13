@@ -50,7 +50,7 @@
       "content_outline": ["要点1", "要点2", "要点3"],
       "image_type": "flowchart | architecture | sequence | comparison | chart | none",
       "image_description": "图片内容描述 (用于生成，如果 image_type 不是 none)",
-      "code_blocks": 代码块数量 (0-2，非技术教程类文章建议为0),
+      "code_blocks": 代码块数量 (tutorial类型0-2，其他类型必须为0),
       "has_output_block": true/false,
       "key_quote": "章节核心结论 (用于引用块)"
     }
@@ -65,7 +65,7 @@
 ## 注意事项
 1. 章节之间要有逻辑递进关系
 2. **优先使用配图（mermaid 图）而非代码块**，每个章节建议至少有一个配图
-3. 代码块仅在必要时使用（如教程类文章的代码示例），科普类文章应避免代码
+3. **代码块规则**：只有 tutorial 类型文章可以包含代码块（0-2个），problem-solution 和 comparison 类型文章的 code_blocks 必须为 0
 4. 问题-解决型必须包含"失败案例"和"成功案例"对比
 5. 标题要吸引眼球，包含关键词
 6. image_type 优先选择 flowchart、architecture、sequence 等 mermaid 类型，便于可视化展示概念

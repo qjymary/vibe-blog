@@ -84,7 +84,8 @@ class LLMService:
     def chat(
         self,
         messages: List[Dict[str, Any]],
-        temperature: float = 0.7
+        temperature: float = 0.7,
+        response_format: Dict[str, Any] = None
     ) -> Optional[str]:
         """
         发送聊天请求
@@ -92,6 +93,7 @@ class LLMService:
         Args:
             messages: 消息列表，格式 [{"role": "user/system/assistant", "content": "..."}]
             temperature: 温度参数
+            response_format: 响应格式，如 {"type": "json_object"}
             
         Returns:
             模型响应文本，失败返回 None
@@ -104,6 +106,10 @@ class LLMService:
             return None
         
         try:
+            # 如果指定了 JSON 格式，绑定到模型
+            if response_format and response_format.get("type") == "json_object":
+                model = model.bind(response_format={"type": "json_object"})
+            
             # 转换消息格式
             langchain_messages = []
             for msg in messages:
