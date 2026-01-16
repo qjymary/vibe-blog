@@ -1895,24 +1895,56 @@
                 
                 // 将所有图片转换为 base64（解决跨域问题）
                 const images = markdownContent.querySelectorAll('img');
+                console.log(`[导出] 发现 ${images.length} 张图片需要处理`);
+                
+                let successCount = 0;
+                let failCount = 0;
+                
                 await Promise.all(Array.from(images).map(async (img) => {
                     try {
                         // 跳过已经是 base64 的图片
-                        if (img.src.startsWith('data:')) return;
+                        if (img.src.startsWith('data:')) {
+                            successCount++;
+                            return;
+                        }
+                        
+                        // 处理相对路径，确保使用完整 URL
+                        let imgUrl = img.src;
+                        console.log(`[导出] 处理图片: ${imgUrl}`);
                         
                         // 使用 fetch 获取图片并转换为 base64
-                        const response = await fetch(img.src);
+                        const response = await fetch(imgUrl, { 
+                            mode: 'cors',
+                            credentials: 'same-origin'
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                        }
+                        
                         const blob = await response.blob();
-                        const base64 = await new Promise((resolve) => {
+                        if (blob.size === 0) {
+                            throw new Error('图片内容为空');
+                        }
+                        
+                        const base64 = await new Promise((resolve, reject) => {
                             const reader = new FileReader();
                             reader.onloadend = () => resolve(reader.result);
+                            reader.onerror = reject;
                             reader.readAsDataURL(blob);
                         });
                         img.src = base64;
+                        successCount++;
+                        console.log(`[导出] 图片转换成功: ${imgUrl.substring(0, 50)}...`);
                     } catch (e) {
-                        console.warn('图片转换失败:', img.src, e);
+                        failCount++;
+                        console.error('图片转换失败:', img.src, e);
+                        // 图片加载失败时，设置一个占位符避免影响整体导出
+                        img.style.display = 'none';
                     }
                 }));
+                
+                console.log(`[导出] 图片处理完成: 成功 ${successCount}, 失败 ${failCount}`);
                 
                 // 使用 html2canvas 截图（白色背景）
                 const canvas = await html2canvas(markdownContent, {
