@@ -1727,8 +1727,8 @@
                     code = code.replace(/\[([^\]]+)\]/g, (match, content) => {
                         // 如果已经用引号包裹，跳过
                         if (content.startsWith('"') && content.endsWith('"')) return match;
-                        // 检查是否包含需要转义的特殊字符
-                        if (/[\\\/\n·•–—]/.test(content) || content.includes('\\n')) {
+                        // 检查是否包含需要转义的特殊字符（包括括号）
+                        if (/[\\\/\n·•–—\(\)]/.test(content) || content.includes('\\n')) {
                             // 替换 \n 为 <br/>
                             let fixed = content.replace(/\\n/g, '<br/>');
                             // 用引号包裹
