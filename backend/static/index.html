@@ -496,7 +496,9 @@
             border-color: rgba(78,205,196,0.5);
             box-shadow: 0 8px 24px rgba(0,0,0,0.12);
         }
+        /* 暂时隐藏删除按钮，后续需要时取消注释 display: none */
         .history-card .delete-btn {
+            display: none;
             position: absolute;
             top: 8px;
             right: 8px;
@@ -1874,6 +1876,10 @@
             const btns = document.querySelectorAll('.download-btn');
             let btn = null;
             btns.forEach(b => { if (b.textContent.includes('导出图片')) btn = b; });
+            // 也尝试找 export-image-btn
+            if (!btn) {
+                btn = document.querySelector('.export-image-btn');
+            }
             const originalText = btn ? btn.innerHTML : '';
             if (btn) {
                 btn.innerHTML = '⏳ 导出中...';
@@ -1887,29 +1893,73 @@
                 markdownContent.style.maxHeight = 'none';
                 markdownContent.style.overflow = 'visible';
                 
+                // 将所有图片转换为 base64（解决跨域问题）
+                const images = markdownContent.querySelectorAll('img');
+                await Promise.all(Array.from(images).map(async (img) => {
+                    try {
+                        // 跳过已经是 base64 的图片
+                        if (img.src.startsWith('data:')) return;
+                        
+                        // 使用 fetch 获取图片并转换为 base64
+                        const response = await fetch(img.src);
+                        const blob = await response.blob();
+                        const base64 = await new Promise((resolve) => {
+                            const reader = new FileReader();
+                            reader.onloadend = () => resolve(reader.result);
+                            reader.readAsDataURL(blob);
+                        });
+                        img.src = base64;
+                    } catch (e) {
+                        console.warn('图片转换失败:', img.src, e);
+                    }
+                }));
+                
                 // 使用 html2canvas 截图（白色背景）
                 const canvas = await html2canvas(markdownContent, {
                     backgroundColor: '#ffffff',
                     scale: 2,
                     useCORS: true,
                     allowTaint: true,
-                    logging: false
+                    logging: false,
+                    imageTimeout: 15000
                 });
                 
                 // 恢复样式
                 markdownContent.style.maxHeight = originalMaxHeight;
                 markdownContent.style.overflow = originalOverflow;
                 
-                // 下载图片
-                const link = document.createElement('a');
-                link.download = filename;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-                
-                if (btn) {
-                    btn.innerHTML = '✅ 已导出';
-                    setTimeout(() => { btn.innerHTML = originalText; }, 1500);
+                // 检查 canvas 是否有效
+                if (canvas.width === 0 || canvas.height === 0) {
+                    throw new Error('生成的图片为空，请检查内容');
                 }
+                
+                // 使用 toBlob 下载图片（更可靠）
+                canvas.toBlob((blob) => {
+                    if (!blob || blob.size === 0) {
+                        console.error('生成的 Blob 为空');
+                        alert('导出失败：生成的图片为空');
+                        if (btn) {
+                            btn.innerHTML = originalText;
+                            btn.disabled = false;
+                        }
+                        return;
+                    }
+                    
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.download = filename;
+                    link.href = url;
+                    link.click();
+                    
+                    // 清理
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    
+                    if (btn) {
+                        btn.innerHTML = '✅ 已导出';
+                        setTimeout(() => { btn.innerHTML = originalText; }, 1500);
+                    }
+                }, 'image/png', 1.0);
+                
             } catch (e) {
                 console.error('导出失败:', e);
                 alert('导出失败: ' + e.message);
