@@ -489,7 +489,7 @@ class BlogService:
             markdown_content = final_state.get('final_markdown', '')
             # 从 final_state 获取图片风格参数
             image_style = final_state.get('image_style', '')
-            cover_image_path = self._generate_cover_image(
+            cover_image_result = self._generate_cover_image(
                 title=outline.get('title', topic),
                 topic=topic,
                 full_content=markdown_content,
@@ -497,6 +497,9 @@ class BlogService:
                 task_id=task_id,
                 image_style=image_style
             )
+            # 解构返回值：(外网URL, 本地路径)
+            cover_image_url = cover_image_result[0] if cover_image_result else None
+            cover_image_path = cover_image_result[1] if cover_image_result else None
             
             # 自动保存 Markdown 到文件（包含封面图）
             markdown_content = final_state.get('final_markdown', '')
@@ -531,10 +534,10 @@ class BlogService:
             
             # 生成封面动画（如果用户选择了该选项）
             cover_video_path = None
-            if generate_cover_video and cover_image_path:
+            if generate_cover_video and cover_image_url:
                 cover_video_path = self._generate_cover_video(
                     history_id=task_id,
-                    cover_image_path=cover_image_path,
+                    cover_image_url=cover_image_url,
                     task_manager=task_manager,
                     task_id=task_id
                 )
@@ -614,7 +617,7 @@ class BlogService:
         task_manager=None,
         task_id: str = None,
         image_style: str = ""
-    ) -> Optional[str]:
+    ) -> Optional[tuple]:
         """
         生成封面架构图
         
@@ -627,7 +630,7 @@ class BlogService:
             image_style: 图片风格 ID（可选）
             
         Returns:
-            图片本地路径
+            (外网URL, 本地路径) 元组，或 None
         """
         image_service = get_image_service()
         if not image_service or not image_service.is_available():
@@ -683,7 +686,8 @@ class BlogService:
                         'logger': 'blog_service',
                         'message': f'封面架构图生成完成'
                     })
-                return result.local_path
+                # 返回 (外网URL, 本地路径) 元组
+                return (result.url, result.local_path)
             else:
                 logger.warning("封面图生成失败，未获取到图片路径")
                 return None
@@ -695,7 +699,7 @@ class BlogService:
     def _generate_cover_video(
         self,
         history_id: str,
-        cover_image_path: str,
+        cover_image_url: str,
         task_manager=None,
         task_id: str = None
     ) -> Optional[str]:
@@ -704,7 +708,7 @@ class BlogService:
         
         Args:
             history_id: 历史记录 ID
-            cover_image_path: 封面图本地路径
+            cover_image_url: 封面图外网 URL（直接使用图片生成服务返回的 URL）
             task_manager: 任务管理器
             task_id: 任务 ID
             
@@ -712,10 +716,8 @@ class BlogService:
             视频访问 URL 或 None
         """
         try:
-            from services.oss_service import get_oss_service
             from services.video_service import get_video_service
             import os
-            import uuid
             
             # 发送进度事件
             if task_manager and task_id:
@@ -736,41 +738,14 @@ class BlogService:
                 logger.warning("视频生成服务不可用，跳过封面动画生成")
                 return None
             
-            # 上传封面图到 OSS
-            oss_service = get_oss_service()
-            if not oss_service or not oss_service.is_available:
-                logger.warning("OSS 服务不可用，无法上传封面图")
-                return None
-            
-            # 生成 OSS 路径
-            unique_id = uuid.uuid4().hex[:8]
-            filename = os.path.basename(cover_image_path)
-            remote_path = f"vibe-blog/covers/{history_id}/{unique_id}_{filename}"
+            # 直接使用图片生成服务返回的外网 URL
+            logger.info(f"使用封面图 URL: {cover_image_url}")
             
             if task_manager and task_id:
                 task_manager.send_event(task_id, 'log', {
                     'level': 'INFO',
                     'logger': 'blog_service',
-                    'message': '正在上传封面图到 OSS...'
-                })
-            
-            oss_result = oss_service.upload_file(
-                local_path=cover_image_path,
-                remote_path=remote_path
-            )
-            
-            if not oss_result.get('success'):
-                logger.error(f"封面图上传失败: {oss_result.get('error')}")
-                return None
-            
-            image_url = oss_result['url']
-            logger.info(f"封面图已上传到 OSS: {image_url}")
-            
-            if task_manager and task_id:
-                task_manager.send_event(task_id, 'log', {
-                    'level': 'INFO',
-                    'logger': 'blog_service',
-                    'message': '封面图上传完成，开始生成动画视频...'
+                    'message': '开始生成动画视频...'
                 })
             
             # 定义进度回调
@@ -784,7 +759,7 @@ class BlogService:
             
             # 调用视频生成服务
             result = video_service.generate_from_image(
-                image_url=image_url,
+                image_url=cover_image_url,
                 progress_callback=progress_callback
             )
             
