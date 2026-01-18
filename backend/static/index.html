@@ -453,27 +453,6 @@
         }
         .history-card:hover .delete-btn { opacity: 1; }
         .history-card .delete-btn:hover { background: #ff6b6b; }
-        .history-card .book-tag {
-            position: absolute;
-            top: 8px;
-            left: 8px;
-            background: rgba(102, 126, 234, 0.9);
-            color: #fff;
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-            cursor: pointer;
-            z-index: 10;
-            max-width: 120px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            transition: all 0.2s;
-        }
-        .history-card .book-tag:hover {
-            background: rgba(102, 126, 234, 1);
-            transform: scale(1.05);
-        }
         .history-cover {
             height: 120px;
             background: linear-gradient(135deg, #4ECDC4, #44A08D);
@@ -499,187 +478,6 @@
             padding: 40px;
             color: rgba(0,0,0,0.4);
             font-size: 14px;
-        }
-        .history-total {
-            font-size: 14px;
-            color: rgba(0,0,0,0.5);
-            font-weight: normal;
-        }
-        .history-pagination {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-            margin-top: 24px;
-            flex-wrap: wrap;
-        }
-        .history-pagination button {
-            padding: 8px 16px;
-            border: 1px solid rgba(0,0,0,0.1);
-            background: rgba(255,255,255,0.8);
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 13px;
-            color: #333;
-            transition: all 0.2s;
-        }
-        .history-pagination button:hover:not(:disabled) {
-            background: #4ECDC4;
-            color: white;
-            border-color: #4ECDC4;
-        }
-        .history-pagination button:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-        }
-        .history-pagination button.active {
-            background: #4ECDC4;
-            color: white;
-            border-color: #4ECDC4;
-        }
-        .history-pagination .page-info {
-            font-size: 13px;
-            color: rgba(0,0,0,0.5);
-            padding: 0 8px;
-        }
-        
-        /* 历史记录 Tab 切换 */
-        .history-tab {
-            padding: 8px 16px;
-            border: 1px solid rgba(0,0,0,0.1);
-            background: rgba(255,255,255,0.8);
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            color: #666;
-            transition: all 0.2s;
-        }
-        .history-tab:hover {
-            background: rgba(0,0,0,0.05);
-        }
-        .history-tab.active {
-            background: linear-gradient(135deg, #4ECDC4, #44a08d);
-            color: white;
-            border-color: #4ECDC4;
-        }
-        .history-tab .history-total,
-        .history-tab .books-total {
-            font-size: 12px;
-            opacity: 0.8;
-        }
-        .scan-books-btn {
-            padding: 8px 16px;
-            border: 1px solid #667eea;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 13px;
-            transition: all 0.2s;
-        }
-        .scan-books-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-        .scan-books-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-        
-        /* 书籍网格 */
-        .books-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            gap: 20px;
-            justify-items: center;
-        }
-        .book-card {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        .book-card:hover {
-            transform: translateY(-6px);
-        }
-        .book-cover {
-            width: 110px;
-            height: 150px;
-            border-radius: 4px 10px 10px 4px;
-            overflow: hidden;
-            position: relative;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15), -2px 0 8px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
-        }
-        .book-card:hover .book-cover {
-            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25), -2px 0 8px rgba(0, 0, 0, 0.1);
-        }
-        .book-cover img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        .book-cover::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 6px;
-            height: 100%;
-            background: linear-gradient(90deg, rgba(0, 0, 0, 0.25) 0%, transparent 100%);
-        }
-        .book-cover-default {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 12px;
-            text-align: center;
-        }
-        .book-cover-default .book-icon {
-            font-size: 32px;
-            margin-bottom: 6px;
-        }
-        .book-cover-default .book-title-inner {
-            font-size: 11px;
-            font-weight: 600;
-            color: #fff;
-            line-height: 1.3;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-            overflow: hidden;
-            display: -webkit-box;
-            -webkit-line-clamp: 3;
-            -webkit-box-orient: vertical;
-        }
-        .theme-ai { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .theme-web { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-        .theme-data { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-        .theme-devops { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
-        .theme-security { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
-        .theme-general { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); }
-        .book-title {
-            margin-top: 10px;
-            font-size: 12px;
-            font-weight: 600;
-            color: #333;
-            text-align: center;
-            max-width: 120px;
-            line-height: 1.4;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-        .book-stats {
-            margin-top: 4px;
-            font-size: 10px;
-            color: #888;
-            display: flex;
-            gap: 6px;
         }
 
         @media (max-width: 768px) {
@@ -758,6 +556,16 @@
                                 border-top: 6px solid #1a1a1a;"></div>
                         </div>
                     </div>
+                    <!-- 文章类型选项 -->
+                    <div style="display: flex; align-items: center; gap: 6px;" id="articleTypeOptions">
+                        <div class="option-tag active" data-article-type="tutorial" style="padding: 4px 10px; font-size: 11px; border-radius: 12px;">📚 教程型</div>
+                        <div class="option-tag" data-article-type="problem-solution" style="padding: 4px 10px; font-size: 11px; border-radius: 12px;">🔧 问题解决</div>
+                        <div class="option-tag" data-article-type="comparison" style="padding: 4px 10px; font-size: 11px; border-radius: 12px;">⚖️ 对比分析</div>
+                        <div class="option-tag" data-article-type="storybook" style="padding: 4px 10px; font-size: 11px; border-radius: 12px;">🎨 科普绘本</div>
+                        <div class="option-tag active" data-length="short" style="padding: 4px 10px; font-size: 11px; border-radius: 12px;">📄 短文</div>
+                        <div class="option-tag" data-length="medium" style="padding: 4px 10px; font-size: 11px; border-radius: 12px;">📑 中等</div>
+                        <div class="option-tag" data-length="long" style="padding: 4px 10px; font-size: 11px; border-radius: 12px;">📖 长文</div>
+                                            </div>
                 </div>
                 <!-- 生成按钮 -->
                 <button id="createBlogBtn" style="
@@ -797,12 +605,10 @@
             border-radius: 12px;
             border: 1px solid rgba(0,0,0,0.08);
         ">
-            <!-- 一排配置选项 -->
             <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
-                <!-- 文章类型下拉框 -->
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 13px; color: #666;">📚 文章类型:</span>
-                    <select id="articleTypeSelect" style="
+                    <span style="font-size: 13px; color: #666;">👥 受众适配:</span>
+                    <select id="audienceLevelSelect" style="
                         padding: 6px 12px;
                         border: 1px solid rgba(0,0,0,0.15);
                         border-radius: 8px;
@@ -810,37 +616,14 @@
                         background: #fff;
                         cursor: pointer;
                         outline: none;
-                        min-width: 100px;
+                        min-width: 160px;
                     ">
-                        <option value="tutorial">教程型</option>
-                        <option value="problem-solution">问题解决</option>
-                        <option value="comparison">对比分析</option>
-                        <option value="storybook">科普绘本</option>
+                        <option value="beginner">技术小白版</option>
+                        <option value="kids">儿童版</option>
+                        <option value="highschool">高中生版</option>
+                        <option value="workplace">职场版</option>
                     </select>
                 </div>
-                
-                <!-- 文章长度下拉框 -->
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 13px; color: #666;">📄 文章长度:</span>
-                    <select id="targetLengthSelect" style="
-                        padding: 6px 12px;
-                        border: 1px solid rgba(0,0,0,0.15);
-                        border-radius: 8px;
-                        font-size: 13px;
-                        background: #fff;
-                        cursor: pointer;
-                        outline: none;
-                        min-width: 120px;
-                    ">
-                        <option value="mini">⚡ Mini (快速)</option>
-                        <option value="short">短文</option>
-                        <option value="medium">中等</option>
-                        <option value="long">长文</option>
-                        <option value="custom">⚙️ 自定义</option>
-                    </select>
-                </div>
-                
-                <!-- 配图风格下拉框 -->
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <span style="font-size: 13px; color: #666;">🎨 配图风格:</span>
                     <select id="imageStyleSelect" style="
@@ -851,54 +634,10 @@
                         background: #fff;
                         cursor: pointer;
                         outline: none;
-                        min-width: 120px;
+                        min-width: 160px;
                     ">
                         <option value="">加载中...</option>
                     </select>
-                </div>
-                
-                <!-- 生成封面动画 -->
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                        <input type="checkbox" id="generateCoverVideoCheckbox" style="
-                            width: 16px;
-                            height: 16px;
-                            cursor: pointer;
-                        ">
-                        <span style="font-size: 13px; color: #666;">🎬 生成封面动画</span>
-                    </label>
-                    <span style="font-size: 11px; color: #999;" title="将封面图转换为循环播放的动画视频（约需 2-5 分钟）">ⓘ</span>
-                </div>
-            </div>
-            
-            <!-- 自定义配置面板（仅在选择自定义时显示） -->
-            <div id="customConfigPanel" style="display: none; margin-top: 12px; padding: 12px; background: rgba(0,0,0,0.03); border-radius: 8px;">
-                <div style="font-size: 12px; color: #999; margin-bottom: 10px;">⚙️ 自定义配置</div>
-                <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <label style="font-size: 12px; color: #666;">章节数:</label>
-                        <input type="number" id="customSectionsCount" min="1" max="12" value="4" style="
-                            width: 50px; padding: 4px 6px; border: 1px solid rgba(0,0,0,0.15);
-                            border-radius: 6px; font-size: 12px; text-align: center;">
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <label style="font-size: 12px; color: #666;">配图数:</label>
-                        <input type="number" id="customImagesCount" min="0" max="20" value="4" style="
-                            width: 50px; padding: 4px 6px; border: 1px solid rgba(0,0,0,0.15);
-                            border-radius: 6px; font-size: 12px; text-align: center;">
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <label style="font-size: 12px; color: #666;">代码块:</label>
-                        <input type="number" id="customCodeBlocksCount" min="0" max="10" value="2" style="
-                            width: 50px; padding: 4px 6px; border: 1px solid rgba(0,0,0,0.15);
-                            border-radius: 6px; font-size: 12px; text-align: center;">
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <label style="font-size: 12px; color: #666;">目标字数:</label>
-                        <input type="number" id="customWordCount" min="300" max="15000" value="3500" step="500" style="
-                            width: 70px; padding: 4px 6px; border: 1px solid rgba(0,0,0,0.15);
-                            border-radius: 6px; font-size: 12px; text-align: center;">
-                    </div>
                 </div>
             </div>
         </div>
@@ -990,28 +729,10 @@
     <!-- 历史记录区域 -->
     <section class="history-section" id="historySection">
         <div class="history-header">
-            <div style="display: flex; align-items: center; gap: 20px;">
-                <div class="history-tabs" style="display: flex; gap: 8px;">
-                    <button class="history-tab active" data-tab="blogs" onclick="switchHistoryTab('blogs')">
-                        📝 历史博客 <span class="history-total" id="historyTotal"></span>
-                    </button>
-                    <button class="history-tab" data-tab="books" onclick="switchHistoryTab('books')">
-                        📚 教程列表 <span class="books-total" id="booksTotal"></span>
-                    </button>
-                </div>
-            </div>
-            <button class="scan-books-btn" id="scanBooksBtn" style="display: none;" onclick="regenerateBooks()">
-                🔄 扫描聚合
-            </button>
+            <h2 class="section-title">📜 历史记录</h2>
         </div>
-        <!-- 博客列表 -->
         <div class="history-grid" id="historyGrid">
             <div class="history-empty">暂无历史记录，生成博客后将自动保存</div>
-        </div>
-        <div class="history-pagination" id="historyPagination"></div>
-        <!-- 书籍列表 -->
-        <div class="books-grid" id="booksGrid" style="display: none;">
-            <div class="history-empty">暂无教程书籍，点击「扫描聚合」自动生成</div>
         </div>
     </section>
 
@@ -1024,16 +745,10 @@
         
         // 长文博客选项
         let articleType = 'tutorial';
-        let targetLength = 'mini';
+        let targetLength = 'short';
         
         // 已上传的知识文档
         let uploadedDocuments = [];
-        
-        // 历史记录分页状态
-        let historyCurrentPage = 1;
-        let historyPageSize = 12;
-        let historyTotalPages = 1;
-        let historyTotal = 0;
         
         // ========== 加载前端配置 ==========
         (async function loadFrontendConfig() {
@@ -1041,16 +756,10 @@
                 const response = await fetch('/api/config');
                 const data = await response.json();
                 if (data.success && data.config) {
-                    const features = data.config.features || {};
                     // 根据配置显示/隐藏 reviewer 入口
-                    if (features.reviewer) {
+                    if (data.config.reviewer_enabled) {
                         const reviewerTab = document.getElementById('reviewerTab');
                         if (reviewerTab) reviewerTab.style.display = 'block';
-                    }
-                    // 根据配置显示/隐藏封面动画选项
-                    if (!features.cover_video) {
-                        const coverVideoContainer = document.getElementById('generateCoverVideoCheckbox')?.parentElement?.parentElement;
-                        if (coverVideoContainer) coverVideoContainer.style.display = 'none';
                     }
                 }
             } catch (e) {
@@ -1397,7 +1106,7 @@
             });
         });
 
-        // 选项切换（保留页数和图片的 tag 点击）
+        // 选项切换
         document.querySelectorAll('.option-tag').forEach(tag => {
             tag.addEventListener('click', () => {
                 if (tag.dataset.pages) {
@@ -1407,25 +1116,18 @@
                 } else if (tag.dataset.images) {
                     tag.classList.toggle('active');
                     generateImages = tag.classList.contains('active');
+                } else if (tag.dataset.articleType) {
+                    document.querySelectorAll('.option-tag[data-article-type]').forEach(t => t.classList.remove('active'));
+                    tag.classList.add('active');
+                    articleType = tag.dataset.articleType;
+                } else if (tag.dataset.length) {
+                    document.querySelectorAll('.option-tag[data-length]').forEach(t => t.classList.remove('active'));
+                    tag.classList.add('active');
+                    targetLength = tag.dataset.length;
                 } else {
                     tag.classList.toggle('active');
                 }
             });
-        });
-        
-        // 文章类型下拉框
-        document.getElementById('articleTypeSelect').addEventListener('change', (e) => {
-            articleType = e.target.value;
-        });
-        
-        // 文章长度下拉框
-        document.getElementById('targetLengthSelect').addEventListener('change', (e) => {
-            targetLength = e.target.value;
-            // 显示/隐藏自定义配置面板
-            const customConfigPanel = document.getElementById('customConfigPanel');
-            if (customConfigPanel) {
-                customConfigPanel.style.display = targetLength === 'custom' ? 'block' : 'none';
-            }
         });
 
         // 示例卡片点击
@@ -1702,23 +1404,11 @@
             
             // 根据类型选择不同的 API
             const isStorybook = articleType === 'storybook';
-            const isMini = targetLength === 'mini';
-            let apiUrl = isStorybook ? '/api/generate' : (isMini ? '/api/blog/generate/mini' : '/api/blog/generate');
-            const taskName = isStorybook ? '科普绘本' : (isMini ? 'Mini 博客' : '博客');
+            const apiUrl = isStorybook ? '/api/generate' : '/api/blog/generate';
+            const taskName = isStorybook ? '科普绘本' : '博客';
             document.getElementById('progressText').textContent = `正在创建${taskName}生成任务...`;
 
             try {
-                // 获取自定义配置（如果选择了自定义模式）
-                const getCustomConfig = () => {
-                    if (targetLength !== 'custom') return null;
-                    return {
-                        sections_count: parseInt(document.getElementById('customSectionsCount').value) || 4,
-                        images_count: parseInt(document.getElementById('customImagesCount').value) || 4,
-                        code_blocks_count: parseInt(document.getElementById('customCodeBlocksCount').value) || 2,
-                        target_word_count: parseInt(document.getElementById('customWordCount').value) || 3500
-                    };
-                };
-                
                 // 根据类型构建不同的请求体
                 const requestBody = isStorybook 
                     ? {
@@ -1728,12 +1418,6 @@
                         style: '可爱卡通风',
                         generate_images: true
                     }
-                    : isMini
-                    ? {
-                        topic: topic,
-                        article_type: articleType,
-                        generate_cover_video: getGenerateCoverVideo()
-                    }
                     : {
                         topic: topic,
                         article_type: articleType,
@@ -1741,8 +1425,7 @@
                         target_length: targetLength,
                         document_ids: getReadyDocumentIds(),
                         image_style: getSelectedImageStyle(),
-                        generate_cover_video: getGenerateCoverVideo(),
-                        custom_config: getCustomConfig()
+                        audience_level: getSelectedAudienceLevel()  // 新增：受众适配
                     };
                 
                 const response = await fetch(apiUrl, {
@@ -2090,22 +1773,15 @@
                     code = code.replace(/；/g, ';');  // 中文分号转英文
                     code = code.replace(/，/g, ',');  // 中文逗号转英文
                     
-                    // 修复 subgraph 空标签问题：subgraph xxx[""] -> subgraph xxx[" "]
-                    code = code.replace(/(\bsubgraph\s+\w+)\[""\]/g, '$1[" "]');
-                    // 修复节点空标签问题：xxx[""] -> xxx[" "]
-                    code = code.replace(/(\w+)\[""\]/g, '$1[" "]');
-                    
                     // 处理节点文本中的特殊字符
                     // 匹配 [...] 节点，处理其中的特殊字符
                     code = code.replace(/\[([^\]]+)\]/g, (match, content) => {
                         // 如果已经用引号包裹，跳过
                         if (content.startsWith('"') && content.endsWith('"')) return match;
-                        // 检查是否包含需要转义的特殊字符（包括括号、等号、引号等）
-                        if (/[\\\/\n·•–—\(\)="]/.test(content) || content.includes('\\n')) {
+                        // 检查是否包含需要转义的特殊字符（包括括号）
+                        if (/[\\\/\n·•–—\(\)]/.test(content) || content.includes('\\n')) {
                             // 替换 \n 为 <br/>
                             let fixed = content.replace(/\\n/g, '<br/>');
-                            // 转义内部的双引号为 HTML 实体
-                            fixed = fixed.replace(/"/g, '#quot;');
                             // 用引号包裹
                             return '["' + fixed + '"]';
                         }
@@ -2438,33 +2114,20 @@
 
         // ========== 历史记录功能 ==========
         
-        // 加载历史记录（支持分页）
-        async function loadHistory(page = 1) {
-            console.log('[loadHistory] 开始加载历史记录, 页码:', page);
+        // 加载历史记录
+        async function loadHistory() {
+            console.log('[loadHistory] 开始加载历史记录...');
             try {
-                const response = await fetch(`/api/history?page=${page}&page_size=${historyPageSize}`);
+                const response = await fetch('/api/history?limit=20');
                 console.log('[loadHistory] API 响应状态:', response.status);
                 const data = await response.json();
                 console.log('[loadHistory] API 返回数据:', data);
-                if (data.success) {
-                    historyCurrentPage = data.page;
-                    historyTotalPages = data.total_pages;
-                    historyTotal = data.total;
-                    
-                    // 更新总数显示
-                    const totalEl = document.getElementById('historyTotal');
-                    if (totalEl) {
-                        totalEl.textContent = historyTotal > 0 ? `(共 ${historyTotal} 篇)` : '';
-                    }
-                    
-                    console.log('[loadHistory] 记录数量:', data.records.length, '总数:', historyTotal);
+                if (data.success && data.records) {
+                    console.log('[loadHistory] 记录数量:', data.records.length);
                     renderHistoryList(data.records);
-                    renderHistoryPagination();
                 } else {
                     console.log('[loadHistory] 无记录或请求失败');
                     renderHistoryList([]);
-                    document.getElementById('historyTotal').textContent = '';
-                    document.getElementById('historyPagination').innerHTML = '';
                 }
             } catch (error) {
                 console.error('[loadHistory] 加载历史记录失败:', error);
@@ -2476,32 +2139,20 @@
             const grid = document.getElementById('historyGrid');
             if (!records || records.length === 0) {
                 grid.innerHTML = '<div class="history-empty">暂无历史记录，生成博客后将自动保存</div>';
-                document.getElementById('historyPagination').innerHTML = '';
                 return;
             }
             
             grid.innerHTML = records.map(record => {
-                // 优先显示视频（循环播放），否则显示图片
-                let coverHtml = '📝';
-                if (record.cover_video) {
-                    const videoSrc = record.cover_video.startsWith('/') ? record.cover_video : `/outputs/videos/${record.cover_video.split('/').pop()}`;
-                    coverHtml = `<video src="${videoSrc}" autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover;"></video>`;
-                } else if (record.cover_image) {
-                    coverHtml = `<img src="/outputs/images/${record.cover_image.split('/').pop()}" alt="封面">`;
-                }
+                const coverHtml = record.cover_image 
+                    ? `<img src="/outputs/images/${record.cover_image.split('/').pop()}" alt="封面">`
+                    : '📝';
                 const timeStr = formatTime(record.created_at);
                 const typeMap = { 'tutorial': '教程', 'problem-solution': '问题解决', 'comparison': '对比分析', 'storybook': '绘本' };
-                const lengthMap = { 'mini': 'Mini', 'short': '短文', 'medium': '中等', 'long': '长文', 'custom': '自定义' };
-                
-                // 归属书籍标签
-                const bookTag = record.book_title 
-                    ? `<span class="book-tag" onclick="event.stopPropagation(); openBook('${record.book_id}')" title="查看书籍">📖 ${escapeHtml(record.book_title)}</span>` 
-                    : '';
+                const lengthMap = { 'short': '短文', 'medium': '中等', 'long': '长文' };
                 
                 return `
                     <div class="history-card" data-id="${record.id}">
                         <button class="delete-btn" onclick="deleteHistory(event, '${record.id}')" title="删除">×</button>
-                        ${bookTag}
                         <div class="history-cover">${coverHtml}</div>
                         <div class="history-content">
                             <div class="history-topic">${escapeHtml(record.topic)}</div>
@@ -2523,51 +2174,6 @@
                     loadHistoryDetail(card.dataset.id);
                 });
             });
-        }
-        
-        // 渲染分页组件
-        function renderHistoryPagination() {
-            const container = document.getElementById('historyPagination');
-            if (historyTotalPages <= 1) {
-                container.innerHTML = '';
-                return;
-            }
-            
-            let html = '';
-            
-            // 上一页按钮
-            html += `<button onclick="loadHistory(${historyCurrentPage - 1})" ${historyCurrentPage <= 1 ? 'disabled' : ''}>« 上一页</button>`;
-            
-            // 页码按钮
-            const maxVisiblePages = 5;
-            let startPage = Math.max(1, historyCurrentPage - Math.floor(maxVisiblePages / 2));
-            let endPage = Math.min(historyTotalPages, startPage + maxVisiblePages - 1);
-            
-            if (endPage - startPage < maxVisiblePages - 1) {
-                startPage = Math.max(1, endPage - maxVisiblePages + 1);
-            }
-            
-            if (startPage > 1) {
-                html += `<button onclick="loadHistory(1)">1</button>`;
-                if (startPage > 2) html += `<span class="page-info">...</span>`;
-            }
-            
-            for (let i = startPage; i <= endPage; i++) {
-                html += `<button onclick="loadHistory(${i})" class="${i === historyCurrentPage ? 'active' : ''}">${i}</button>`;
-            }
-            
-            if (endPage < historyTotalPages) {
-                if (endPage < historyTotalPages - 1) html += `<span class="page-info">...</span>`;
-                html += `<button onclick="loadHistory(${historyTotalPages})">${historyTotalPages}</button>`;
-            }
-            
-            // 下一页按钮
-            html += `<button onclick="loadHistory(${historyCurrentPage + 1})" ${historyCurrentPage >= historyTotalPages ? 'disabled' : ''}>下一页 »</button>`;
-            
-            // 页码信息
-            html += `<span class="page-info">${historyCurrentPage} / ${historyTotalPages} 页</span>`;
-            
-            container.innerHTML = html;
         }
         
         // 格式化时间
@@ -2621,13 +2227,7 @@
                 const response = await fetch(`/api/history/${historyId}`, { method: 'DELETE' });
                 const data = await response.json();
                 if (data.success) {
-                    // 如果当前页只有一条记录且不是第一页，则跳转到上一页
-                    const currentRecords = document.querySelectorAll('#historyGrid .history-card').length;
-                    if (currentRecords <= 1 && historyCurrentPage > 1) {
-                        loadHistory(historyCurrentPage - 1);
-                    } else {
-                        loadHistory(historyCurrentPage);
-                    }
+                    loadHistory(); // 重新加载列表
                 } else {
                     alert('删除失败: ' + data.error);
                 }
@@ -2637,192 +2237,18 @@
             }
         }
         
-        // ========== 书籍/教程列表功能 ==========
-        
-        let currentHistoryTab = 'blogs';
-        const themeIcons = {
-            ai: '🤖',
-            web: '🌐',
-            data: '📊',
-            devops: '⚙️',
-            security: '🔐',
-            general: '📖'
-        };
-        
-        // 切换历史记录 Tab
-        function switchHistoryTab(tab) {
-            currentHistoryTab = tab;
-            
-            // 更新 Tab 样式
-            document.querySelectorAll('.history-tab').forEach(t => {
-                t.classList.toggle('active', t.dataset.tab === tab);
-            });
-            
-            // 切换显示内容
-            const historyGrid = document.getElementById('historyGrid');
-            const historyPagination = document.getElementById('historyPagination');
-            const booksGrid = document.getElementById('booksGrid');
-            const scanBtn = document.getElementById('scanBooksBtn');
-            
-            if (tab === 'blogs') {
-                historyGrid.style.display = 'grid';
-                historyPagination.style.display = 'flex';
-                booksGrid.style.display = 'none';
-                scanBtn.style.display = 'none';
-            } else {
-                historyGrid.style.display = 'none';
-                historyPagination.style.display = 'none';
-                booksGrid.style.display = 'grid';
-                // 根据配置决定是否显示扫描聚合按钮
-                const features = window.appConfig?.features || {};
-                if (features.book_scan) {
-                    scanBtn.style.display = 'block';
-                } else {
-                    scanBtn.style.display = 'none';
-                }
-                loadBooks();
-            }
-        }
-        
-        // 加载书籍列表
-        async function loadBooks() {
-            const grid = document.getElementById('booksGrid');
-            grid.innerHTML = '<div class="history-empty">加载中...</div>';
-            
-            try {
-                const response = await fetch('/api/books');
-                const data = await response.json();
-                
-                if (data.success) {
-                    const totalEl = document.getElementById('booksTotal');
-                    if (totalEl) {
-                        totalEl.textContent = data.books.length > 0 ? `(${data.books.length})` : '';
-                    }
-                    renderBooksList(data.books);
-                } else {
-                    grid.innerHTML = '<div class="history-empty">加载失败</div>';
-                }
-            } catch (error) {
-                console.error('加载书籍失败:', error);
-                grid.innerHTML = '<div class="history-empty">加载失败</div>';
-            }
-        }
-        
-        // 渲染书籍列表
-        function renderBooksList(books) {
-            const grid = document.getElementById('booksGrid');
-            
-            if (!books || books.length === 0) {
-                grid.innerHTML = '<div class="history-empty">暂无教程书籍，点击「扫描聚合」自动生成</div>';
-                return;
-            }
-            
-            grid.innerHTML = books.map(book => {
-                const theme = book.theme || 'general';
-                const icon = themeIcons[theme] || '📖';
-                const wordCount = book.total_word_count >= 10000 
-                    ? (book.total_word_count / 10000).toFixed(1) + '万' 
-                    : book.total_word_count || 0;
-                
-                return `
-                    <div class="book-card" onclick="openBook('${book.id}')">
-                        <div class="book-cover">
-                            ${book.cover_image 
-                                ? `<img src="${book.cover_image}" alt="${book.title}" onerror="this.parentElement.innerHTML=getDefaultCover('${theme}', '${escapeHtml(book.title)}')">`
-                                : `<div class="book-cover-default theme-${theme}">
-                                    <span class="book-icon">${icon}</span>
-                                    <span class="book-title-inner">${escapeHtml(book.title)}</span>
-                                   </div>`
-                            }
-                        </div>
-                        <div class="book-title">${escapeHtml(book.title)}</div>
-                        <div class="book-stats">
-                            <span>${book.chapters_count || 0}章</span>
-                            <span>${wordCount}字</span>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-        
-        // 获取默认封面 HTML
-        function getDefaultCover(theme, title) {
-            const icon = themeIcons[theme] || '📖';
-            return `<div class="book-cover-default theme-${theme}">
-                <span class="book-icon">${icon}</span>
-                <span class="book-title-inner">${title}</span>
-            </div>`;
-        }
-        
-        // 打开书籍阅读器
-        function openBook(bookId) {
-            window.location.href = `/static/book-reader.html?id=${bookId}`;
-        }
-        
-        // 扫描聚合书籍（重新生成）
-        async function regenerateBooks() {
-            const btn = document.getElementById('scanBooksBtn');
-            const originalText = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '⏳ 扫描中...';
-            
-            try {
-                const response = await fetch('/api/books/regenerate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                const data = await response.json();
-                
-                if (data.success) {
-                    alert(`扫描完成！\n创建 ${data.books_created || 0} 本书\n处理 ${data.blogs_processed || 0} 篇博客`);
-                    loadBooks();
-                } else {
-                    alert('扫描失败: ' + (data.error || '未知错误'));
-                }
-            } catch (error) {
-                console.error('扫描失败:', error);
-                alert('扫描失败: ' + error.message);
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalText;
-            }
-        }
-        
         // 页面加载时获取历史记录
-        async function initPage() {
-            // 加载前端配置
-            await loadAppConfig();
-            
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                loadHistory();
+                loadImageStyles();
+                initAdvancedOptions();
+            });
+        } else {
+            // DOM 已经加载完成，直接执行
             loadHistory();
             loadImageStyles();
             initAdvancedOptions();
-            
-            // 检查 URL 参数，自动切换到教程列表
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('tab') === 'books') {
-                switchHistoryTab('books');
-            }
-        }
-        
-        // 加载应用配置
-        async function loadAppConfig() {
-            try {
-                const response = await fetch('/api/config');
-                const data = await response.json();
-                if (data.success && data.config) {
-                    window.appConfig = data.config;
-                }
-            } catch (e) {
-                console.warn('加载配置失败:', e);
-                window.appConfig = {};
-            }
-        }
-        
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initPage);
-        } else {
-            // DOM 已经加载完成，直接执行
-            initPage();
         }
         
         // ========== 高级选项功能 ==========
@@ -2864,10 +2290,10 @@
             return select ? select.value : '';
         }
         
-        // 获取是否生成封面动画
-        function getGenerateCoverVideo() {
-            const checkbox = document.getElementById('generateCoverVideoCheckbox');
-            return checkbox ? checkbox.checked : false;
+        // 获取选中的受众级别
+        function getSelectedAudienceLevel() {
+            const select = document.getElementById('audienceLevelSelect');
+            return select ? select.value : 'beginner';
         }
         
         // ========== vibe-reviewer 功能 ==========

@@ -119,44 +119,7 @@ class DatabaseService:
                     images_count INTEGER DEFAULT 0,
                     review_score INTEGER DEFAULT 0,
                     cover_image TEXT,
-                    cover_video TEXT,
-                    target_sections_count INTEGER,
-                    target_images_count INTEGER,
-                    target_code_blocks_count INTEGER,
-                    target_word_count INTEGER,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                );
-                
-                -- 书籍表：存储聚合的教程书籍
-                CREATE TABLE IF NOT EXISTS books (
-                    id TEXT PRIMARY KEY,
-                    title TEXT NOT NULL,
-                    description TEXT,
-                    theme TEXT DEFAULT 'general',
-                    cover_image TEXT,
-                    outline TEXT,
-                    chapters_count INTEGER DEFAULT 0,
-                    total_word_count INTEGER DEFAULT 0,
-                    blogs_count INTEGER DEFAULT 0,
-                    status TEXT DEFAULT 'active',
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                );
-                
-                -- 书籍章节表：存储书籍的章节结构
-                CREATE TABLE IF NOT EXISTS book_chapters (
-                    id TEXT PRIMARY KEY,
-                    book_id TEXT NOT NULL,
-                    chapter_index INTEGER NOT NULL,
-                    chapter_title TEXT NOT NULL,
-                    section_index TEXT,
-                    section_title TEXT,
-                    blog_id TEXT,
-                    has_content INTEGER DEFAULT 0,
-                    word_count INTEGER DEFAULT 0,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE,
-                    FOREIGN KEY (blog_id) REFERENCES history_records(id) ON DELETE SET NULL
                 );
                 
                 -- 创建索引
@@ -166,56 +129,8 @@ class DatabaseService:
                 CREATE INDEX IF NOT EXISTS idx_chunks_type ON knowledge_chunks(chunk_type);
                 CREATE INDEX IF NOT EXISTS idx_images_document_id ON document_images(document_id);
                 CREATE INDEX IF NOT EXISTS idx_history_created_at ON history_records(created_at);
-                CREATE INDEX IF NOT EXISTS idx_books_status ON books(status);
-                CREATE INDEX IF NOT EXISTS idx_books_theme ON books(theme);
-                CREATE INDEX IF NOT EXISTS idx_book_chapters_book_id ON book_chapters(book_id);
-                CREATE INDEX IF NOT EXISTS idx_book_chapters_blog_id ON book_chapters(blog_id);
             ''')
         logger.info("数据库表初始化完成")
-        
-        # 执行数据库迁移
-        self._migrate_tables()
-    
-    def _migrate_tables(self):
-        """数据库迁移：检查并添加新字段"""
-        with self.get_connection() as conn:
-            # 迁移 history_records 表
-            cursor = conn.execute("PRAGMA table_info(history_records)")
-            columns = [row[1] for row in cursor.fetchall()]
-            
-            new_columns = {
-                'target_sections_count': 'INTEGER',
-                'target_images_count': 'INTEGER',
-                'target_code_blocks_count': 'INTEGER',
-                'target_word_count': 'INTEGER',
-                'book_id': 'TEXT',
-                'summary': 'TEXT'  # 博客摘要
-            }
-            
-            for col_name, col_type in new_columns.items():
-                if col_name not in columns:
-                    logger.info(f"迁移数据库：添加 history_records.{col_name} 列")
-                    conn.execute(f"ALTER TABLE history_records ADD COLUMN {col_name} {col_type}")
-            
-            # 迁移 books 表 - 添加首页相关字段
-            cursor = conn.execute("PRAGMA table_info(books)")
-            book_columns = [row[1] for row in cursor.fetchall()]
-            
-            book_new_columns = {
-                'homepage_content': 'TEXT',   # 首页完整内容（JSON 格式）
-                'full_outline': 'TEXT',       # 完整大纲（包含待建设章节）
-                'highlights': 'TEXT',         # 项目亮点（JSON 格式）
-                'target_audience': 'TEXT',    # 目标受众（JSON 格式）
-                'prerequisites': 'TEXT'       # 前置要求（JSON 格式）
-            }
-            
-            for col_name, col_type in book_new_columns.items():
-                if col_name not in book_columns:
-                    logger.info(f"迁移数据库：添加 books.{col_name} 列")
-                    conn.execute(f"ALTER TABLE books ADD COLUMN {col_name} {col_type}")
-            
-            # 迁移后创建依赖新字段的索引
-            conn.execute('CREATE INDEX IF NOT EXISTS idx_history_book_id ON history_records(book_id)')
     
     # ========== 文档操作 ==========
     
@@ -541,25 +456,18 @@ class DatabaseService:
         code_blocks_count: int = 0,
         images_count: int = 0,
         review_score: int = 0,
-        cover_image: str = None,
-        cover_video: str = None,
-        target_sections_count: int = None,
-        target_images_count: int = None,
-        target_code_blocks_count: int = None,
-        target_word_count: int = None
+        cover_image: str = None
     ) -> Dict[str, Any]:
         """保存历史记录"""
         with self.get_connection() as conn:
             conn.execute('''
                 INSERT INTO history_records 
                 (id, topic, article_type, target_length, markdown_content, outline, 
-                 sections_count, code_blocks_count, images_count, review_score, cover_image, cover_video,
-                 target_sections_count, target_images_count, target_code_blocks_count, target_word_count)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 sections_count, code_blocks_count, images_count, review_score, cover_image)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 history_id, topic, article_type, target_length, markdown_content, outline,
-                sections_count, code_blocks_count, images_count, review_score, cover_image, cover_video,
-                target_sections_count, target_images_count, target_code_blocks_count, target_word_count
+                sections_count, code_blocks_count, images_count, review_score, cover_image
             ))
         
         logger.info(f"保存历史记录: {history_id}, 主题: {topic}")
@@ -577,43 +485,16 @@ class DatabaseService:
                 return dict(row)
         return None
     
-    def list_history(self, limit: int = 20, offset: int = 0) -> List[Dict[str, Any]]:
-        """列出历史记录（按时间倒序，支持分页，包含归属书籍信息）"""
+    def list_history(self, limit: int = 20) -> List[Dict[str, Any]]:
+        """列出历史记录（按时间倒序）"""
         with self.get_connection() as conn:
             cursor = conn.execute(
-                '''SELECT hr.id, hr.topic, hr.article_type, hr.target_length, hr.sections_count, 
-                   hr.code_blocks_count, hr.images_count, hr.review_score, hr.cover_image, hr.cover_video,
-                   hr.target_sections_count, hr.target_images_count, hr.target_code_blocks_count, hr.target_word_count,
-                   hr.created_at,
-                   b.id as book_id,
-                   b.title as book_title
-                   FROM history_records hr
-                   LEFT JOIN book_chapters bc ON hr.id = bc.blog_id
-                   LEFT JOIN books b ON bc.book_id = b.id
-                   ORDER BY hr.created_at DESC LIMIT ? OFFSET ?''',
-                (limit, offset)
+                '''SELECT id, topic, article_type, target_length, sections_count, 
+                   code_blocks_count, images_count, review_score, cover_image, created_at 
+                   FROM history_records ORDER BY created_at DESC LIMIT ?''',
+                (limit,)
             )
             return [dict(row) for row in cursor.fetchall()]
-    
-    def count_history(self) -> int:
-        """获取历史记录总数"""
-        with self.get_connection() as conn:
-            cursor = conn.execute('SELECT COUNT(*) FROM history_records')
-            return cursor.fetchone()[0]
-    
-    def update_history_video(self, history_id: str, cover_video: str) -> bool:
-        """更新历史记录的封面动画"""
-        with self.get_connection() as conn:
-            cursor = conn.execute('''
-                UPDATE history_records 
-                SET cover_video = ?
-                WHERE id = ?
-            ''', (cover_video, history_id))
-            updated = cursor.rowcount > 0
-        
-        if updated:
-            logger.info(f"更新历史记录封面动画: {history_id}")
-        return updated
     
     def delete_history(self, history_id: str) -> bool:
         """删除历史记录"""
@@ -627,349 +508,6 @@ class DatabaseService:
         if deleted:
             logger.info(f"删除历史记录: {history_id}")
         return deleted
-    
-    def update_history_summary(self, history_id: str, summary: str) -> bool:
-        """
-        更新博客摘要
-        
-        Args:
-            history_id: 博客 ID
-            summary: 博客摘要
-        """
-        with self.get_connection() as conn:
-            cursor = conn.execute('''
-                UPDATE history_records 
-                SET summary = ?
-                WHERE id = ?
-            ''', (summary, history_id))
-            updated = cursor.rowcount > 0
-        
-        if updated:
-            logger.info(f"更新博客摘要: {history_id}")
-        return updated
-    
-    def update_history_book_id(self, history_id: str, book_id: str) -> bool:
-        """
-        更新博客所属书籍
-        
-        Args:
-            history_id: 博客 ID
-            book_id: 书籍 ID
-        """
-        with self.get_connection() as conn:
-            cursor = conn.execute('''
-                UPDATE history_records 
-                SET book_id = ?
-                WHERE id = ?
-            ''', (book_id, history_id))
-            return cursor.rowcount > 0
-    
-    # ========== 书籍操作 ==========
-    
-    def create_book(
-        self,
-        book_id: str,
-        title: str,
-        theme: str = 'general',
-        description: str = None
-    ) -> Dict[str, Any]:
-        """
-        创建书籍记录
-        
-        Args:
-            book_id: 书籍 ID
-            title: 书籍标题
-            theme: 主题分类
-            description: 书籍描述
-        
-        Returns:
-            创建的书籍记录
-        """
-        with self.get_connection() as conn:
-            conn.execute('''
-                INSERT INTO books (id, title, theme, description)
-                VALUES (?, ?, ?, ?)
-            ''', (book_id, title, theme, description))
-        
-        logger.info(f"创建书籍: {book_id}, {title}")
-        return self.get_book(book_id)
-    
-    def get_book(self, book_id: str) -> Optional[Dict[str, Any]]:
-        """获取书籍记录"""
-        with self.get_connection() as conn:
-            cursor = conn.execute(
-                'SELECT * FROM books WHERE id = ?',
-                (book_id,)
-            )
-            row = cursor.fetchone()
-            if row:
-                return dict(row)
-        return None
-    
-    def list_books(self, status: str = 'active', limit: int = 50) -> List[Dict[str, Any]]:
-        """列出书籍"""
-        with self.get_connection() as conn:
-            if status:
-                cursor = conn.execute(
-                    'SELECT * FROM books WHERE status = ? ORDER BY updated_at DESC LIMIT ?',
-                    (status, limit)
-                )
-            else:
-                cursor = conn.execute(
-                    'SELECT * FROM books ORDER BY updated_at DESC LIMIT ?',
-                    (limit,)
-                )
-            return [dict(row) for row in cursor.fetchall()]
-    
-    def update_book(
-        self,
-        book_id: str,
-        title: str = None,
-        description: str = None,
-        theme: str = None,
-        cover_image: str = None,
-        outline: str = None,
-        chapters_count: int = None,
-        total_word_count: int = None,
-        blogs_count: int = None,
-        status: str = None
-    ) -> bool:
-        """更新书籍信息"""
-        updates = []
-        params = []
-        
-        if title is not None:
-            updates.append("title = ?")
-            params.append(title)
-        if description is not None:
-            updates.append("description = ?")
-            params.append(description)
-        if theme is not None:
-            updates.append("theme = ?")
-            params.append(theme)
-        if cover_image is not None:
-            updates.append("cover_image = ?")
-            params.append(cover_image)
-        if outline is not None:
-            updates.append("outline = ?")
-            params.append(outline)
-        if chapters_count is not None:
-            updates.append("chapters_count = ?")
-            params.append(chapters_count)
-        if total_word_count is not None:
-            updates.append("total_word_count = ?")
-            params.append(total_word_count)
-        if blogs_count is not None:
-            updates.append("blogs_count = ?")
-            params.append(blogs_count)
-        if status is not None:
-            updates.append("status = ?")
-            params.append(status)
-        
-        if not updates:
-            return False
-        
-        updates.append("updated_at = CURRENT_TIMESTAMP")
-        params.append(book_id)
-        
-        with self.get_connection() as conn:
-            cursor = conn.execute(
-                f"UPDATE books SET {', '.join(updates)} WHERE id = ?",
-                params
-            )
-            updated = cursor.rowcount > 0
-        
-        if updated:
-            logger.info(f"更新书籍: {book_id}")
-        return updated
-    
-    def delete_book(self, book_id: str) -> bool:
-        """删除书籍"""
-        with self.get_connection() as conn:
-            cursor = conn.execute(
-                'DELETE FROM books WHERE id = ?',
-                (book_id,)
-            )
-            deleted = cursor.rowcount > 0
-        
-        if deleted:
-            logger.info(f"删除书籍: {book_id}")
-        return deleted
-    
-    def update_book_homepage(self, book_id: str, homepage_content: dict) -> bool:
-        """
-        更新书籍首页内容
-        
-        Args:
-            book_id: 书籍 ID
-            homepage_content: 首页内容字典，包含 slogan, introduction, highlights, target_audience, prerequisites
-        """
-        import json
-        
-        with self.get_connection() as conn:
-            cursor = conn.execute(
-                '''UPDATE books SET 
-                    homepage_content = ?,
-                    highlights = ?,
-                    target_audience = ?,
-                    prerequisites = ?,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = ?''',
-                (
-                    json.dumps(homepage_content, ensure_ascii=False),
-                    json.dumps(homepage_content.get('highlights', []), ensure_ascii=False),
-                    json.dumps(homepage_content.get('target_audience', []), ensure_ascii=False),
-                    json.dumps(homepage_content.get('prerequisites', []), ensure_ascii=False),
-                    book_id
-                )
-            )
-            updated = cursor.rowcount > 0
-        
-        if updated:
-            logger.info(f"更新书籍首页: {book_id}")
-        return updated
-    
-    def update_book_full_outline(self, book_id: str, full_outline: dict) -> bool:
-        """
-        更新书籍完整大纲（包含待建设章节）
-        
-        Args:
-            book_id: 书籍 ID
-            full_outline: 完整大纲字典
-        """
-        import json
-        
-        with self.get_connection() as conn:
-            cursor = conn.execute(
-                '''UPDATE books SET 
-                    full_outline = ?,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = ?''',
-                (json.dumps(full_outline, ensure_ascii=False), book_id)
-            )
-            updated = cursor.rowcount > 0
-        
-        if updated:
-            logger.info(f"更新书籍完整大纲: {book_id}")
-        return updated
-    
-    # ========== 书籍章节操作 ==========
-    
-    def save_book_chapters(self, book_id: str, chapters: List[Dict[str, Any]]):
-        """
-        保存书籍章节结构
-        
-        Args:
-            book_id: 书籍 ID
-            chapters: 章节列表，每个章节包含 {chapter_index, chapter_title, section_index, section_title, blog_id, has_content, word_count}
-        """
-        with self.get_connection() as conn:
-            # 先删除旧章节
-            conn.execute('DELETE FROM book_chapters WHERE book_id = ?', (book_id,))
-            
-            # 插入新章节
-            for idx, chapter in enumerate(chapters):
-                chapter_id = f"chapter_{book_id}_{idx}"
-                conn.execute('''
-                    INSERT INTO book_chapters 
-                    (id, book_id, chapter_index, chapter_title, section_index, section_title, blog_id, has_content, word_count)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (
-                    chapter_id,
-                    book_id,
-                    chapter.get('chapter_index', 0),
-                    chapter.get('chapter_title', ''),
-                    chapter.get('section_index', ''),
-                    chapter.get('section_title', ''),
-                    chapter.get('blog_id'),
-                    1 if chapter.get('blog_id') else 0,
-                    chapter.get('word_count', 0)
-                ))
-        
-        logger.info(f"保存书籍章节: {book_id}, 共 {len(chapters)} 个章节")
-    
-    def get_book_chapters(self, book_id: str) -> List[Dict[str, Any]]:
-        """获取书籍的所有章节"""
-        with self.get_connection() as conn:
-            cursor = conn.execute(
-                'SELECT * FROM book_chapters WHERE book_id = ? ORDER BY chapter_index, section_index',
-                (book_id,)
-            )
-            return [dict(row) for row in cursor.fetchall()]
-    
-    def get_chapter_with_content(self, book_id: str, chapter_id: str) -> Optional[Dict[str, Any]]:
-        """获取章节及其关联的博客内容"""
-        with self.get_connection() as conn:
-            cursor = conn.execute('''
-                SELECT bc.*, hr.markdown_content, hr.topic as blog_topic
-                FROM book_chapters bc
-                LEFT JOIN history_records hr ON bc.blog_id = hr.id
-                WHERE bc.book_id = ? AND bc.id = ?
-            ''', (book_id, chapter_id))
-            row = cursor.fetchone()
-            if row:
-                return dict(row)
-        return None
-    
-    def get_blogs_by_book(self, book_id: str) -> List[Dict[str, Any]]:
-        """获取书籍关联的所有博客"""
-        with self.get_connection() as conn:
-            cursor = conn.execute('''
-                SELECT hr.* FROM history_records hr
-                INNER JOIN book_chapters bc ON hr.id = bc.blog_id
-                WHERE bc.book_id = ?
-                ORDER BY bc.chapter_index, bc.section_index
-            ''', (book_id,))
-            return [dict(row) for row in cursor.fetchall()]
-    
-    def get_unassigned_blogs(self) -> List[Dict[str, Any]]:
-        """获取未分配到任何书籍的博客"""
-        with self.get_connection() as conn:
-            cursor = conn.execute('''
-                SELECT hr.* FROM history_records hr
-                WHERE hr.book_id IS NULL
-                ORDER BY hr.created_at DESC
-            ''')
-            return [dict(row) for row in cursor.fetchall()]
-    
-    def get_all_blogs_with_book_info(self, limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
-        """获取所有博客及其所属书籍信息"""
-        with self.get_connection() as conn:
-            cursor = conn.execute('''
-                SELECT hr.*, 
-                       bc.book_id,
-                       bc.chapter_index,
-                       bc.chapter_title,
-                       bc.section_index,
-                       bc.section_title,
-                       b.title as book_title
-                FROM history_records hr
-                LEFT JOIN book_chapters bc ON hr.id = bc.blog_id
-                LEFT JOIN books b ON bc.book_id = b.id
-                ORDER BY hr.created_at DESC
-                LIMIT ? OFFSET ?
-            ''', (limit, offset))
-            return [dict(row) for row in cursor.fetchall()]
-
-
-    def clear_all_books(self):
-        """
-        清空所有书籍数据（用于重新生成）
-        
-        删除 books 和 book_chapters 表的所有数据
-        """
-        with self.get_connection() as conn:
-            conn.execute('DELETE FROM book_chapters')
-            conn.execute('DELETE FROM books')
-        logger.info("已清空所有书籍数据")
-    
-    def reset_all_blog_book_ids(self):
-        """
-        重置所有博客的 book_id 为 NULL（用于重新生成）
-        """
-        with self.get_connection() as conn:
-            conn.execute('UPDATE history_records SET book_id = NULL')
-        logger.info("已重置所有博客的 book_id")
 
 
 # 全局单例

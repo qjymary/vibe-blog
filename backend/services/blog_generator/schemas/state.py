@@ -120,9 +120,10 @@ class SharedState(TypedDict):
     topic: str
     article_type: Literal["problem-solution", "tutorial", "comparison"]
     target_audience: Literal["beginner", "intermediate", "advanced"]
-    target_length: Literal["mini", "short", "medium", "long", "custom"]
+    target_length: Literal["short", "medium", "long"]
     source_material: Optional[str]
     image_style: str  # 图片风格 ID
+    audience_level: str  # 受众级别: beginner/kids/highschool/workplace
     
     # 文档知识 (用户上传的文档)
     document_ids: List[str]  # 用户上传的文档 ID 列表
@@ -171,13 +172,6 @@ class SharedState(TypedDict):
     final_html: Optional[str]
     output_folder: Optional[str]
     
-    # 文章长度配置
-    custom_config: Optional[dict]  # 自定义配置
-    target_sections_count: Optional[int]  # 目标章节数
-    target_images_count: Optional[int]  # 目标配图数
-    target_code_blocks_count: Optional[int]  # 目标代码块数
-    target_word_count: Optional[int]  # 目标字数
-    
     # 错误信息
     error: Optional[str]
 
@@ -187,18 +181,14 @@ def get_max_search_count(target_length: str) -> int:
     根据文章长度获取最大搜索次数
     
     可通过环境变量配置：
-    - MULTI_SEARCH_MAX_MINI: Mini 模式最大搜索次数，默认 1
     - MULTI_SEARCH_MAX_SHORT: 短文最大搜索次数，默认 3
     - MULTI_SEARCH_MAX_MEDIUM: 中等文章最大搜索次数，默认 5
     - MULTI_SEARCH_MAX_LONG: 长文最大搜索次数，默认 8
-    - MULTI_SEARCH_MAX_CUSTOM: 自定义模式最大搜索次数，默认 5
     """
     max_search_map = {
-        'mini': int(os.getenv('MULTI_SEARCH_MAX_MINI', '1')),
         'short': int(os.getenv('MULTI_SEARCH_MAX_SHORT', '3')),
         'medium': int(os.getenv('MULTI_SEARCH_MAX_MEDIUM', '5')),
-        'long': int(os.getenv('MULTI_SEARCH_MAX_LONG', '8')),
-        'custom': int(os.getenv('MULTI_SEARCH_MAX_CUSTOM', '5'))
+        'long': int(os.getenv('MULTI_SEARCH_MAX_LONG', '8'))
     }
     return max_search_map.get(target_length, max_search_map['medium'])
 
@@ -212,12 +202,7 @@ def create_initial_state(
     document_ids: List[str] = None,
     document_knowledge: List[dict] = None,
     image_style: str = "",
-    # 新增：文章长度配置参数
-    custom_config: dict = None,
-    target_sections_count: int = None,
-    target_images_count: int = None,
-    target_code_blocks_count: int = None,
-    target_word_count: int = None,
+    audience_level: str = "beginner",  # 新增：受众级别
 ) -> SharedState:
     """创建初始状态"""
     return SharedState(
@@ -227,6 +212,7 @@ def create_initial_state(
         target_length=target_length,
         source_material=source_material,
         image_style=image_style,
+        audience_level=audience_level,  # 传递 audience_level
         # 文档知识
         document_ids=document_ids or [],
         document_knowledge=document_knowledge or [],
@@ -259,10 +245,4 @@ def create_initial_state(
         final_html=None,
         output_folder=None,
         error=None,
-        # 新增：文章长度配置
-        custom_config=custom_config,
-        target_sections_count=target_sections_count,
-        target_images_count=target_images_count,
-        target_code_blocks_count=target_code_blocks_count,
-        target_word_count=target_word_count,
     )

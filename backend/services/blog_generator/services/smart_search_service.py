@@ -140,8 +140,25 @@ class SmartSearchService:
             # 无 LLM 时使用简单规则匹配
             return self._rule_based_routing(topic)
         
-        from ..prompts.prompt_manager import get_prompt_manager
-        prompt = get_prompt_manager().render_search_router(topic)
+        prompt = f"""你是一个搜索源路由器。根据用户的技术主题，判断应该从哪些知识源搜索。
+
+可用的搜索源：
+- arxiv: 学术论文（涉及论文、研究、算法、模型架构、理论时使用）
+- langchain: LangChain 官方博客（LangChain、LangGraph、LCEL、LangSmith 相关）
+- anthropic: Anthropic 研究博客（Claude、Constitutional AI、RLHF 相关）
+- openai: OpenAI 官方博客（GPT、ChatGPT、DALL-E 相关）
+- huggingface: Hugging Face 博客（开源模型、Transformers、Diffusers 相关）
+- jiqizhixin: 机器之心（中文 AI 资讯、行业动态）
+- general: 通用搜索（始终包含，作为兜底）
+
+用户主题: {topic}
+
+请返回 JSON 格式（只返回 JSON，不要其他内容）：
+{{
+  "sources": ["arxiv", "langchain", "general"],
+  "arxiv_query": "英文搜索词，用于 arXiv 论文搜索",
+  "blog_query": "中文或英文搜索词，用于博客搜索"
+}}"""
 
         try:
             response = self.llm.chat(

@@ -1484,32 +1484,8 @@
                 console.log('找到 mermaid 节点:', mermaidNodes.length);
                 
                 mermaidNodes.forEach(async function(node, index) {
-                    let code = node.textContent.trim();
+                    const code = node.textContent.trim();
                     console.log('Mermaid 代码 #' + index + ':', code.substring(0, 100));
-                    
-                    // 预处理 Mermaid 代码，修复常见语法问题
-                    code = code.replace(/[""'']/g, '"');  // 清理特殊引号
-                    code = code.replace(/（/g, '(').replace(/）/g, ')');  // 中文括号转英文
-                    code = code.replace(/【/g, '[').replace(/】/g, ']');  // 中文方括号转英文
-                    code = code.replace(/：/g, ':');  // 中文冒号转英文
-                    code = code.replace(/；/g, ';');  // 中文分号转英文
-                    code = code.replace(/，/g, ',');  // 中文逗号转英文
-                    
-                    // 修复 subgraph 空标签问题：subgraph xxx[""] -> subgraph xxx[" "]
-                    code = code.replace(/(\bsubgraph\s+\w+)\[""\]/g, '$1[" "]');
-                    // 修复节点空标签问题：xxx[""] -> xxx[" "]
-                    code = code.replace(/(\w+)\[""\]/g, '$1[" "]');
-                    
-                    // 处理节点文本中的特殊字符
-                    code = code.replace(/\[([^\]]+)\]/g, (match, content) => {
-                        if (content.startsWith('"') && content.endsWith('"')) return match;
-                        if (/[\\\/\n·•–—\(\)="]/.test(content) || content.includes('\\n')) {
-                            let fixed = content.replace(/\\n/g, '<br/>');
-                            fixed = fixed.replace(/"/g, '#quot;');
-                            return '["' + fixed + '"]';
-                        }
-                        return match;
-                    });
                     
                     try {
                         // 使用 mermaid.render 单独渲染每个图表

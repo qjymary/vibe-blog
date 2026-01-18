@@ -6,7 +6,6 @@ import os
 import logging
 import re
 import io
-import json
 import zipfile
 import requests
 from contextvars import ContextVar
@@ -32,8 +31,6 @@ from services.database_service import get_db_service, init_db_service
 from services.file_parser_service import get_file_parser, init_file_parser
 from services.knowledge_service import get_knowledge_service, init_knowledge_service
 from services.image_styles import get_style_manager
-from services.oss_service import get_oss_service, init_oss_service
-from services.video_service import get_video_service, init_video_service
 
 # 创建任务 ID 上下文变量
 task_id_context: ContextVar[str] = ContextVar('task_id', default='')
@@ -111,26 +108,6 @@ def create_app(config_class=None):
     app.config['IMAGE_OUTPUT_FOLDER'] = os.path.join(app.config.get('OUTPUT_FOLDER', 'outputs'), 'images')
     init_image_service(app.config)
     
-    # 初始化 OSS 服务（用于上传图片获取公网 URL）
-    init_oss_service(app.config)
-    oss_service = get_oss_service()
-    if oss_service and oss_service.is_available:
-        logger.info("OSS 服务已初始化")
-    else:
-        logger.warning("OSS 服务不可用，封面动画功能将受限")
-    
-    # 初始化视频生成服务（视频保存到 outputs/videos/）
-    try:
-        os.makedirs(os.path.join(app.config.get('OUTPUT_FOLDER', 'outputs'), 'videos'), exist_ok=True)
-    except (OSError, IOError):
-        pass
-    init_video_service(app.config)
-    video_service = get_video_service()
-    if video_service and video_service.is_available():
-        logger.info("视频生成服务已初始化")
-    else:
-        logger.warning("视频生成服务不可用")
-    
     # 初始化知识源相关服务（二期）
     init_db_service()
     init_knowledge_service(
@@ -181,86 +158,11 @@ def create_app(config_class=None):
             return jsonify({'error': 'vibe-reviewer 功能未启用'}), 403
         return send_from_directory(static_folder, 'reviewer.html')
     
-    # Docsify 书籍阅读器需要的 home.md
-    @app.route('/home.md')
-    def book_reader_home():
-        return send_from_directory(static_folder, 'home.md')
-    
-    # Docsify 书籍阅读器需要的 _sidebar.md - 根据 book_id 动态生成
-    @app.route('/_sidebar.md')
-    @app.route('/static/_sidebar.md')
-    def book_reader_sidebar():
-        book_id = request.args.get('book_id')
-        referrer = request.referrer
-        logger.info(f"_sidebar.md 请求: book_id={book_id}, referrer={referrer}")
-        if not book_id and referrer:
-            # 从 Referer 中提取 book_id
-            import re
-            match = re.search(r'[?&]id=([^&#]+)', referrer)
-            if match:
-                book_id = match.group(1)
-                logger.info(f"从 Referer 提取到 book_id: {book_id}")
-        # 移除可能的 .md 后缀
-        if book_id and book_id.endswith('.md'):
-            book_id = book_id[:-3]
-        if book_id:
-            try:
-                db_service = get_db_service()
-                book = db_service.get_book(book_id)
-                if book:
-                    chapters = db_service.get_book_chapters(book_id)
-                    md = f"- [**第 0 章 导读**](/)\n"
-                    
-                    # 按章节索引分组
-                    chapter_groups = {}
-                    for chapter in chapters:
-                        idx = chapter.get('chapter_index', 0)
-                        title = chapter.get('chapter_title', '未分类')
-                        if idx not in chapter_groups:
-                            chapter_groups[idx] = {'title': title, 'sections': []}
-                        chapter_groups[idx]['sections'].append(chapter)
-                    
-                    # 按章节索引排序，生成章节和小节（不包含导读部分，由前端自动提取）
-                    for idx in sorted(chapter_groups.keys()):
-                        group = chapter_groups[idx]
-                        md += f"- **第 {idx} 章 {group['title']}**\n"
-                        for section in group['sections']:
-                            chapter_id = section.get('id', '')
-                            section_title = section.get('section_title', '')
-                            md += f"  - [{section_title}](/chapter/{chapter_id})\n"
-                    
-                    return Response(md, mimetype='text/markdown')
-            except Exception as e:
-                logger.error(f"生成侧边栏失败: {e}")
-        return Response('- [首页](/)', mimetype='text/markdown')
-    
-    # Docsify 书籍阅读器 - 章节内容路由（支持多种路径格式）
-    @app.route('/chapter/<path:chapter_path>')
-    @app.route('/chapter/<path:chapter_path>.md')
-    @app.route('/static/chapter/<path:chapter_path>')
-    @app.route('/static/chapter/<path:chapter_path>.md')
-    def book_reader_chapter(chapter_path):
-        # 返回一个占位符，实际内容由前端 beforeEach 钩子处理
-        return Response('# 加载中...', mimetype='text/markdown')
-    
     # 提供 outputs 目录下的图片文件
     @app.route('/outputs/images/<path:filename>')
-    @app.route('/static/chapter/outputs/images/<path:filename>')  # Docsify 章节页面中的图片路径
     def serve_output_image(filename):
         images_folder = os.path.join(outputs_folder, 'images')
         return send_from_directory(images_folder, filename)
-    
-    # 提供 outputs 目录下的封面图片
-    @app.route('/outputs/covers/<path:filename>')
-    def serve_output_cover(filename):
-        covers_folder = os.path.join(outputs_folder, 'covers')
-        return send_from_directory(covers_folder, filename)
-    
-    # 提供 outputs 目录下的视频文件
-    @app.route('/outputs/videos/<path:filename>')
-    def serve_output_video(filename):
-        videos_folder = os.path.join(outputs_folder, 'videos')
-        return send_from_directory(videos_folder, filename)
     
     # API 文档页面（保留原来的简单页面）
     @app.route('/api-docs')
@@ -365,26 +267,14 @@ def create_app(config_class=None):
             logger.error(f"转化失败: {e}", exc_info=True)
             return jsonify({'success': False, 'error': str(e)}), 500
     
-    # 获取前端配置（统一的功能开关）
+    # 获取前端配置
     @app.route('/api/config', methods=['GET'])
     def get_frontend_config():
-        """
-        获取前端配置
-        
-        统一管理所有前端功能开关，避免分散配置
-        """
+        """获取前端配置"""
         return jsonify({
             'success': True,
             'config': {
-                # 功能开关
-                'features': {
-                    'reviewer': os.environ.get('REVIEWER_ENABLED', 'false').lower() == 'true',
-                    'book_scan': os.environ.get('BOOK_SCAN_ENABLED', 'false').lower() == 'true',
-                    'cover_video': os.environ.get('COVER_VIDEO_ENABLED', 'true').lower() == 'true',
-                },
-                # 兼容旧版（后续可删除）
-                'reviewer_enabled': os.environ.get('REVIEWER_ENABLED', 'false').lower() == 'true',
-                'book_scan_enabled': os.environ.get('BOOK_SCAN_ENABLED', 'false').lower() == 'true'
+                'reviewer_enabled': os.environ.get('REVIEWER_ENABLED', 'false').lower() == 'true'
             }
         })
     
@@ -978,22 +868,11 @@ def create_app(config_class=None):
             target_length = data.get('target_length', 'medium')
             source_material = data.get('source_material', None)
             document_ids = data.get('document_ids', [])  # 文档 ID 列表
-            image_style = data.get('image_style', '')  # 图片风格 ID
-            generate_cover_video = data.get('generate_cover_video', False)  # 是否生成封面动画
-            custom_config = data.get('custom_config', None)  # 自定义配置（仅当 target_length='custom' 时使用）
-            
-            # 验证自定义配置
-            if target_length == 'custom':
-                if not custom_config:
-                    return jsonify({'success': False, 'error': '自定义模式需要提供 custom_config 参数'}), 400
-                try:
-                    from config import validate_custom_config
-                    validate_custom_config(custom_config)
-                except ValueError as e:
-                    return jsonify({'success': False, 'error': f'自定义配置验证失败: {str(e)}'}), 400
+            image_style = data.get('image_style', '')  # 新增：图片风格 ID
+            audience_level = data.get('audience_level', 'beginner')  # 新增：受众级别
             
             # 记录请求信息
-            logger.info(f"📝 博客生成请求: topic={topic}, article_type={article_type}, target_audience={target_audience}, target_length={target_length}, document_ids={document_ids}, generate_cover_video={generate_cover_video}, custom_config={custom_config}")
+            logger.info(f"📝 博客生成请求: topic={topic}, article_type={article_type}, target_audience={target_audience}, target_length={target_length}, document_ids={document_ids}")
             
             # 检查博客生成服务
             blog_service = get_blog_service()
@@ -1034,8 +913,7 @@ def create_app(config_class=None):
                 document_ids=document_ids,
                 document_knowledge=document_knowledge,
                 image_style=image_style,
-                generate_cover_video=generate_cover_video,
-                custom_config=custom_config,
+                audience_level=audience_level,  # 传递
                 task_manager=task_manager,
                 app=current_app._get_current_object()
             )
@@ -1049,78 +927,6 @@ def create_app(config_class=None):
             
         except Exception as e:
             logger.error(f"创建博客生成任务失败: {e}", exc_info=True)
-            return jsonify({'success': False, 'error': str(e)}), 500
-    
-    @app.route('/api/blog/generate/mini', methods=['POST'])
-    def generate_blog_mini():
-        """
-        创建 Mini 版博客生成任务（1个章节，完整流程）
-        用于快速测试整个功能链路
-        
-        请求体:
-        {
-            "topic": "LangGraph 入门教程",
-            "article_type": "tutorial",
-            "generate_cover_video": true  // 可选，是否生成封面动画
-        }
-        
-        返回:
-        {
-            "success": true,
-            "task_id": "xxx",
-            "message": "任务已创建，请订阅 SSE 获取进度"
-        }
-        """
-        try:
-            data = request.get_json()
-            
-            if not data:
-                return jsonify({'success': False, 'error': '请提供 JSON 数据'}), 400
-            
-            topic = data.get('topic', '')
-            if not topic:
-                return jsonify({'success': False, 'error': '请提供 topic 参数'}), 400
-            
-            article_type = data.get('article_type', 'tutorial')
-            generate_cover_video = data.get('generate_cover_video', False)
-            
-            logger.info(f"📝 Mini 博客生成请求: topic={topic}, article_type={article_type}, generate_cover_video={generate_cover_video}")
-            
-            # 检查博客生成服务
-            blog_service = get_blog_service()
-            if not blog_service:
-                return jsonify({'success': False, 'error': '博客生成服务不可用'}), 500
-            
-            # 创建任务
-            task_manager = get_task_manager()
-            task_id = task_manager.create_task()
-            
-            # 异步执行生成（Mini 版：使用 mini 模式，只生成 1 个章节）
-            from flask import current_app
-            blog_service.generate_async(
-                task_id=task_id,
-                topic=topic,
-                article_type=article_type,
-                target_audience='intermediate',
-                target_length='mini',  # Mini 版使用 mini 模式
-                source_material=None,
-                document_ids=[],
-                document_knowledge=[],
-                image_style='',
-                generate_cover_video=generate_cover_video,
-                custom_config=None,
-                task_manager=task_manager,
-                app=current_app._get_current_object()
-            )
-            
-            return jsonify({
-                'success': True,
-                'task_id': task_id,
-                'message': 'Mini 博客生成任务已创建（1个章节完整流程），请订阅 /api/tasks/{task_id}/stream 获取进度'
-            }), 202
-            
-        except Exception as e:
-            logger.error(f"创建 Mini 博客生成任务失败: {e}", exc_info=True)
             return jsonify({'success': False, 'error': str(e)}), 500
     
     @app.route('/api/blog/generate/sync', methods=['POST'])
@@ -1180,25 +986,12 @@ def create_app(config_class=None):
     
     @app.route('/api/history', methods=['GET'])
     def list_history():
-        """获取历史记录列表（支持分页）"""
+        """获取历史记录列表"""
         try:
-            page = request.args.get('page', 1, type=int)
-            page_size = request.args.get('page_size', 12, type=int)
-            offset = (page - 1) * page_size
-            
+            limit = request.args.get('limit', 20, type=int)
             db_service = get_db_service()
-            total = db_service.count_history()
-            records = db_service.list_history(limit=page_size, offset=offset)
-            total_pages = (total + page_size - 1) // page_size
-            
-            return jsonify({
-                'success': True, 
-                'records': records,
-                'total': total,
-                'page': page,
-                'page_size': page_size,
-                'total_pages': total_pages
-            })
+            records = db_service.list_history(limit=limit)
+            return jsonify({'success': True, 'records': records})
         except Exception as e:
             logger.error(f"获取历史记录失败: {e}", exc_info=True)
             return jsonify({'success': False, 'error': str(e)}), 500
@@ -1229,111 +1022,6 @@ def create_app(config_class=None):
                 return jsonify({'success': False, 'error': '记录不存在'}), 404
         except Exception as e:
             logger.error(f"删除历史记录失败: {e}", exc_info=True)
-            return jsonify({'success': False, 'error': str(e)}), 500
-    
-    # ========== 视频生成 API ==========
-    
-    @app.route('/api/video/generate', methods=['POST'])
-    def generate_video():
-        """
-        生成封面动画视频
-        
-        请求体:
-        {
-            "history_id": "xxx",      // 历史记录 ID（用于更新数据库）
-            "image_url": "https://...", // 封面图 URL（可选，如果提供则直接使用）
-            "image_path": "/path/to/image.png", // 封面图本地路径（可选）
-            "prompt": "可选的自定义提示词"
-        }
-        
-        返回:
-        {
-            "success": true,
-            "video_url": "/outputs/videos/xxx.mp4",
-            "task_id": "veo3-task-id"
-        }
-        """
-        try:
-            data = request.get_json()
-            
-            if not data:
-                return jsonify({'success': False, 'error': '请提供 JSON 数据'}), 400
-            
-            history_id = data.get('history_id')
-            image_url = data.get('image_url')
-            image_path = data.get('image_path')
-            prompt = data.get('prompt')
-            
-            # 检查视频服务
-            video_service = get_video_service()
-            if not video_service or not video_service.is_available():
-                return jsonify({'success': False, 'error': '视频生成服务不可用'}), 503
-            
-            # 如果没有提供 image_url，需要从本地路径上传到 OSS
-            if not image_url:
-                if not image_path:
-                    # 尝试从历史记录获取封面图路径
-                    if history_id:
-                        db_service = get_db_service()
-                        record = db_service.get_history(history_id)
-                        if record and record.get('cover_image'):
-                            image_path = record.get('cover_image')
-                
-                if not image_path:
-                    return jsonify({'success': False, 'error': '缺少 image_url 或 image_path 参数'}), 400
-                
-                # 上传到 OSS
-                oss_service = get_oss_service()
-                if not oss_service or not oss_service.is_available:
-                    return jsonify({'success': False, 'error': 'OSS 服务不可用，无法上传图片'}), 503
-                
-                # 生成 OSS 路径
-                import uuid
-                unique_id = uuid.uuid4().hex[:8]
-                filename = os.path.basename(image_path)
-                remote_path = f"vibe-blog/covers/{unique_id}_{filename}"
-                
-                oss_result = oss_service.upload_file(
-                    local_path=image_path,
-                    remote_path=remote_path
-                )
-                
-                if not oss_result.get('success'):
-                    return jsonify({'success': False, 'error': f"图片上传失败: {oss_result.get('error')}"}), 500
-                
-                image_url = oss_result['url']
-                logger.info(f"封面图已上传到 OSS: {image_url}")
-            
-            # 调用视频生成服务
-            logger.info(f"开始生成封面动画: history_id={history_id}, image_url={image_url[:80]}...")
-            
-            result = video_service.generate_from_image(
-                image_url=image_url,
-                prompt=prompt
-            )
-            
-            if not result:
-                return jsonify({'success': False, 'error': '视频生成失败'}), 500
-            
-            # 构建视频访问 URL
-            video_filename = os.path.basename(result.local_path) if result.local_path else None
-            video_access_url = f"/outputs/videos/{video_filename}" if video_filename else result.url
-            
-            # 更新数据库
-            if history_id:
-                db_service = get_db_service()
-                db_service.update_history_video(history_id, video_access_url)
-            
-            logger.info(f"封面动画生成成功: {video_access_url}")
-            
-            return jsonify({
-                'success': True,
-                'video_url': video_access_url,
-                'task_id': result.task_id
-            })
-            
-        except Exception as e:
-            logger.error(f"视频生成失败: {e}", exc_info=True)
             return jsonify({'success': False, 'error': str(e)}), 500
     
     # ========== Markdown 导出 API ==========
@@ -1456,280 +1144,6 @@ def create_app(config_class=None):
             
         except Exception as e:
             logger.error(f"导出 Markdown 失败: {e}", exc_info=True)
-            return jsonify({'success': False, 'error': str(e)}), 500
-    
-    # ========== 书籍 API ==========
-    
-    @app.route('/api/books', methods=['GET'])
-    def list_books():
-        """获取书籍列表"""
-        try:
-            db_service = get_db_service()
-            status = request.args.get('status', 'active')
-            limit = request.args.get('limit', 50, type=int)
-            
-            books = db_service.list_books(status=status, limit=limit)
-            
-            # 解析大纲 JSON
-            for book in books:
-                if book.get('outline'):
-                    try:
-                        book['outline'] = json.loads(book['outline'])
-                    except json.JSONDecodeError:
-                        book['outline'] = None
-            
-            return jsonify({
-                'success': True,
-                'books': books,
-                'total': len(books)
-            })
-        except Exception as e:
-            logger.error(f"获取书籍列表失败: {e}", exc_info=True)
-            return jsonify({'success': False, 'error': str(e)}), 500
-    
-    @app.route('/api/books/<book_id>', methods=['GET'])
-    def get_book(book_id):
-        """获取书籍详情"""
-        try:
-            db_service = get_db_service()
-            book = db_service.get_book(book_id)
-            
-            if not book:
-                return jsonify({'success': False, 'error': '书籍不存在'}), 404
-            
-            # 解析大纲 JSON
-            if book.get('outline'):
-                try:
-                    book['outline'] = json.loads(book['outline'])
-                except json.JSONDecodeError:
-                    book['outline'] = None
-            
-            # 获取章节信息
-            book['chapters'] = db_service.get_book_chapters(book_id)
-            
-            return jsonify({'success': True, 'book': book})
-        except Exception as e:
-            logger.error(f"获取书籍详情失败: {e}", exc_info=True)
-            return jsonify({'success': False, 'error': str(e)}), 500
-    
-    @app.route('/api/books/<book_id>/chapters/<chapter_id>', methods=['GET'])
-    def get_book_chapter(book_id, chapter_id):
-        """获取书籍章节内容"""
-        try:
-            db_service = get_db_service()
-            chapter = db_service.get_chapter_with_content(book_id, chapter_id)
-            
-            if not chapter:
-                return jsonify({'success': False, 'error': '章节不存在'}), 404
-            
-            return jsonify({
-                'success': True,
-                'chapter': chapter,
-                'has_content': bool(chapter.get('markdown_content')),
-                'markdown_content': chapter.get('markdown_content', ''),
-                'chapter_title': chapter.get('chapter_title', ''),
-                'section_title': chapter.get('section_title', '')
-            })
-        except Exception as e:
-            logger.error(f"获取章节内容失败: {e}", exc_info=True)
-            return jsonify({'success': False, 'error': str(e)}), 500
-    
-    @app.route('/api/books/regenerate', methods=['POST'])
-    def regenerate_books():
-        """重新生成所有书籍（清空旧数据，重新聚合）"""
-        try:
-            from services.book_scanner_service import BookScannerService
-            
-            db_service = get_db_service()
-            llm_service = get_llm_service()
-            
-            scanner = BookScannerService(db_service, llm_service)
-            result = scanner.regenerate_all_books()
-            
-            return jsonify({
-                'success': True,
-                **result
-            })
-        except Exception as e:
-            logger.error(f"重新生成书籍失败: {e}", exc_info=True)
-            return jsonify({'success': False, 'error': str(e)}), 500
-    
-    @app.route('/api/books/<book_id>/rescan', methods=['POST'])
-    def rescan_book(book_id):
-        """重新扫描单本书籍"""
-        try:
-            from services.book_scanner_service import BookScannerService
-            
-            db_service = get_db_service()
-            llm_service = get_llm_service()
-            
-            scanner = BookScannerService(db_service, llm_service)
-            result = scanner.rescan_book(book_id)
-            
-            return jsonify({
-                'success': True,
-                **result
-            })
-        except Exception as e:
-            logger.error(f"重新扫描书籍失败: {e}", exc_info=True)
-            return jsonify({'success': False, 'error': str(e)}), 500
-    
-    @app.route('/api/books/<book_id>/generate-intro', methods=['POST'])
-    def generate_book_intro(book_id):
-        """生成书籍简介"""
-        try:
-            from services.book_scanner_service import BookScannerService
-            
-            db_service = get_db_service()
-            llm_service = get_llm_service()
-            
-            scanner = BookScannerService(db_service, llm_service)
-            introduction = scanner.generate_book_introduction(book_id)
-            
-            if introduction:
-                return jsonify({
-                    'success': True,
-                    'introduction': introduction
-                })
-            else:
-                return jsonify({'success': False, 'error': '生成简介失败'}), 500
-        except Exception as e:
-            logger.error(f"生成书籍简介失败: {e}", exc_info=True)
-            return jsonify({'success': False, 'error': str(e)}), 500
-    
-    @app.route('/api/books/<book_id>/generate-cover', methods=['POST'])
-    def generate_book_cover(book_id):
-        """生成书籍封面"""
-        try:
-            from services.book_scanner_service import BookScannerService
-            
-            db_service = get_db_service()
-            
-            scanner = BookScannerService(db_service)
-            cover_url = scanner.generate_book_cover(book_id)
-            
-            if cover_url:
-                return jsonify({
-                    'success': True,
-                    'cover_url': cover_url
-                })
-            else:
-                return jsonify({'success': False, 'error': '生成封面失败'}), 500
-        except Exception as e:
-            logger.error(f"生成书籍封面失败: {e}", exc_info=True)
-            return jsonify({'success': False, 'error': str(e)}), 500
-    
-    @app.route('/api/books/generate-all-covers', methods=['POST'])
-    def generate_all_book_covers():
-        """为所有书籍生成封面"""
-        try:
-            from services.book_scanner_service import BookScannerService
-            
-            db_service = get_db_service()
-            
-            scanner = BookScannerService(db_service)
-            result = scanner.generate_covers_for_all_books()
-            
-            return jsonify({
-                'success': True,
-                **result
-            })
-        except Exception as e:
-            logger.error(f"批量生成封面失败: {e}", exc_info=True)
-            return jsonify({'success': False, 'error': str(e)}), 500
-    
-    @app.route('/api/books/<book_id>', methods=['DELETE'])
-    def delete_book(book_id):
-        """删除书籍"""
-        try:
-            db_service = get_db_service()
-            deleted = db_service.delete_book(book_id)
-            
-            if deleted:
-                return jsonify({'success': True, 'message': '删除成功'})
-            else:
-                return jsonify({'success': False, 'error': '书籍不存在'}), 404
-        except Exception as e:
-            logger.error(f"删除书籍失败: {e}", exc_info=True)
-            return jsonify({'success': False, 'error': str(e)}), 500
-    
-    @app.route('/api/books/<book_id>/generate-homepage', methods=['POST'])
-    def generate_book_homepage(book_id):
-        """生成书籍首页内容"""
-        try:
-            from services.outline_expander_service import OutlineExpanderService
-            from services.homepage_generator_service import HomepageGeneratorService
-            
-            db_service = get_db_service()
-            llm_service = get_llm_service()
-            search_service = get_search_service()
-            
-            # 创建服务
-            outline_expander = OutlineExpanderService(db_service, llm_service, search_service)
-            homepage_service = HomepageGeneratorService(db_service, llm_service, outline_expander)
-            
-            # 生成首页
-            result = homepage_service.generate_homepage(book_id)
-            
-            if result:
-                return jsonify({
-                    'success': True,
-                    'homepage': result
-                })
-            else:
-                return jsonify({'success': False, 'error': '生成首页失败'}), 500
-        except Exception as e:
-            logger.error(f"生成书籍首页失败: {e}", exc_info=True)
-            return jsonify({'success': False, 'error': str(e)}), 500
-    
-    @app.route('/api/books/<book_id>/expand-outline', methods=['POST'])
-    def expand_book_outline(book_id):
-        """扩展书籍大纲"""
-        try:
-            from services.outline_expander_service import OutlineExpanderService
-            
-            db_service = get_db_service()
-            llm_service = get_llm_service()
-            search_service = get_search_service()
-            
-            # 创建服务
-            outline_expander = OutlineExpanderService(db_service, llm_service, search_service)
-            
-            # 扩展大纲
-            result = outline_expander.expand_outline(book_id)
-            
-            if result:
-                return jsonify({
-                    'success': True,
-                    'outline': result
-                })
-            else:
-                return jsonify({'success': False, 'error': '扩展大纲失败'}), 500
-        except Exception as e:
-            logger.error(f"扩展书籍大纲失败: {e}", exc_info=True)
-            return jsonify({'success': False, 'error': str(e)}), 500
-    
-    @app.route('/api/blogs/with-book-info', methods=['GET'])
-    def list_blogs_with_book_info():
-        """获取博客列表（包含书籍信息）"""
-        try:
-            db_service = get_db_service()
-            page = request.args.get('page', 1, type=int)
-            page_size = request.args.get('page_size', 20, type=int)
-            offset = (page - 1) * page_size
-            
-            blogs = db_service.get_all_blogs_with_book_info(limit=page_size, offset=offset)
-            total = db_service.count_history()
-            
-            return jsonify({
-                'success': True,
-                'blogs': blogs,
-                'total': total,
-                'page': page,
-                'page_size': page_size
-            })
-        except Exception as e:
-            logger.error(f"获取博客列表失败: {e}", exc_info=True)
             return jsonify({'success': False, 'error': str(e)}), 500
     
     # ========== vibe-reviewer 初始化 (新增) ==========

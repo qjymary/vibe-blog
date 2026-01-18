@@ -129,24 +129,26 @@ class PromptManager:
         target_length: str = "medium",
         background_knowledge: str = None,
         key_concepts: list = None,
-        target_sections_count: int = None,
-        target_images_count: int = None,
-        target_code_blocks_count: int = None,
-        target_word_count: int = None
+        audience_level: str = "beginner"  # 新增：beginner/kids/highschool/workplace
     ) -> str:
         """渲染 Planner Prompt"""
+        # 根据受众级别选择模板
+        template_map = {
+            "kids": "planner_kids",
+            "highschool": "planner_highschool",
+            "workplace": "planner_workplace",
+            "beginner": "planner"  # 默认：技术小白版
+        }
+        template_name = template_map.get(audience_level, "planner")
+        
         return self.render(
-            'planner',
+            template_name,
             topic=topic,
             article_type=article_type,
             target_audience=target_audience,
             target_length=target_length,
             background_knowledge=background_knowledge,
-            key_concepts=key_concepts or [],
-            target_sections_count=target_sections_count,
-            target_images_count=target_images_count,
-            target_code_blocks_count=target_code_blocks_count,
-            target_word_count=target_word_count
+            key_concepts=key_concepts or []
         )
     
     def render_writer(
@@ -154,11 +156,21 @@ class PromptManager:
         section_outline: dict,
         previous_section_summary: str = None,
         next_section_preview: str = None,
-        background_knowledge: str = None
+        background_knowledge: str = None,
+        audience_level: str = "beginner"  # 新增：beginner/kids/highschool/workplace
     ) -> str:
         """渲染 Writer Prompt"""
+        # 根据受众级别选择模板
+        template_map = {
+            "kids": "writer_kids",
+            "highschool": "writer_highschool",
+            "workplace": "writer_workplace",
+            "beginner": "writer"  # 默认：技术小白版
+        }
+        template_name = template_map.get(audience_level, "writer")
+        
         return self.render(
-            'writer',
+            template_name,
             section_outline=section_outline,
             previous_section_summary=previous_section_summary,
             next_section_preview=next_section_preview,
@@ -306,10 +318,6 @@ class PromptManager:
             article_summary=article_summary
         )
     
-    def render_cover_video_prompt(self) -> str:
-        """渲染封面视频动画 Prompt"""
-        return self.render('cover_video_prompt')
-    
     def render_search_summarizer(
         self,
         gaps: list,
@@ -320,102 +328,6 @@ class PromptManager:
             'search_summarizer',
             gaps=gaps or [],
             results=results or []
-        )
-    
-    def render_search_router(self, topic: str) -> str:
-        """渲染搜索源路由 Prompt"""
-        return self.render('search_router', topic=topic)
-    
-    def render_article_summary(self, title: str, content: str, max_length: int = None) -> str:
-        """渲染文章摘要提炼 Prompt"""
-        return self.render('article_summary', title=title, content=content, max_length=max_length)
-    
-    def render_artist_default(self, prompt: str, caption: str) -> str:
-        """渲染默认图片生成 Prompt（卡通手绘风格）"""
-        return self.render('artist_default', prompt=prompt, caption=caption)
-    
-    def render_book_scanner(
-        self,
-        existing_books_info: str,
-        new_blogs_info: str
-    ) -> str:
-        """渲染书籍扫描决策 Prompt"""
-        return self.render(
-            'book_scanner',
-            existing_books_info=existing_books_info,
-            new_blogs_info=new_blogs_info
-        )
-    
-    def render_book_introduction(
-        self,
-        book_title: str,
-        book_theme: str,
-        chapters_count: int,
-        chapters: list
-    ) -> str:
-        """渲染书籍简介生成 Prompt"""
-        return self.render(
-            'book_introduction',
-            book_title=book_title,
-            book_theme=book_theme,
-            chapters_count=chapters_count,
-            chapters=chapters
-        )
-    
-    def render_book_classifier(
-        self,
-        existing_books_info: str,
-        blogs_info: str,
-        reference_books_info: str = ""
-    ) -> str:
-        """渲染博客分类 Prompt（第一步：只做分类）"""
-        return self.render(
-            'book_classifier',
-            existing_books_info=existing_books_info,
-            blogs_info=blogs_info,
-            reference_books_info=reference_books_info
-        )
-    
-    def render_book_outline_generator(
-        self,
-        book_title: str,
-        book_theme: str,
-        book_description: str,
-        blogs_info: str
-    ) -> str:
-        """渲染书籍大纲生成 Prompt（第二步：生成大纲）"""
-        return self.render(
-            'book_outline_generator',
-            book_title=book_title,
-            book_theme=book_theme,
-            book_description=book_description,
-            blogs_info=blogs_info
-        )
-    
-    def render_outline_expander(
-        self,
-        book: dict,
-        existing_chapters: list,
-        search_results: list = None
-    ) -> str:
-        """渲染大纲扩展 Prompt"""
-        return self.render(
-            'outline_expander',
-            book=book,
-            existing_chapters=existing_chapters or [],
-            search_results=search_results or []
-        )
-    
-    def render_homepage_generator(
-        self,
-        book: dict,
-        outline: dict
-    ) -> str:
-        """渲染首页生成 Prompt"""
-        return self.render(
-            'homepage_generator',
-            book=book,
-            outline=outline or {}
         )
 
 

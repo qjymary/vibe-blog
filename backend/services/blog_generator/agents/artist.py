@@ -17,33 +17,6 @@ MAX_WORKERS = int(os.environ.get('BLOG_GENERATOR_MAX_WORKERS', '3'))
 
 logger = logging.getLogger(__name__)
 
-# ASCII 流程图特征模式（强特征 - 必须出现）
-ASCII_FLOWCHART_STRONG_PATTERNS = [
-    r'\+[-=]+\+',           # +---+ 或 +===+ 边框（流程图典型特征）
-    r'[-=]{2,}>',           # ---> 或 ===> 箭头（流程图典型特征）
-    r'<[-=]{2,}',           # <--- 反向箭头
-]
-
-# ASCII 流程图特征模式（弱特征 - 辅助判断）
-ASCII_FLOWCHART_WEAK_PATTERNS = [
-    r'\|[^|]{2,}\|',        # | xxx | 内容行
-    r'\+-{2,}\+',           # +--+ 连续边框
-]
-
-# Markdown 表格特征（用于排除）
-MARKDOWN_TABLE_PATTERN = r'^\s*\|([^|]+\|)+\s*$'  # | col1 | col2 | 格式
-MARKDOWN_TABLE_SEPARATOR = r'^\s*\|[\s:-]+\|'      # |---|---| 分隔符
-
-# 需要排除的其他模式
-EXCLUDE_PATTERNS = [
-    r'^\s*<!--.*-->',           # HTML 注释
-    r'^\s*#',                   # Markdown 标题
-    r'^\s*[-*]\s+.*-->',        # 列表项中的箭头（如 "- item --> result"）
-    r'^\s*\d+\.\s+.*-->',       # 有序列表中的箭头
-    r'^\$\$.*\$\$',             # LaTeX 块公式
-    r'^\$.*\$$',                # LaTeX 行内公式
-]
-
 
 class ArtistAgent:
     """
@@ -58,142 +31,6 @@ class ArtistAgent:
             llm_client: LLM 客户端
         """
         self.llm = llm_client
-    
-    def detect_ascii_flowcharts(self, content: str) -> List[Dict[str, Any]]:
-        """
-        检测内容中的 ASCII 流程图
-        
-        Args:
-            content: 章节内容
-            
-        Returns:
-            检测到的 ASCII 流程图列表，每项包含:
-            - start_line: 起始行号
-            - end_line: 结束行号  
-            - ascii_content: ASCII 图内容
-            - original_text: 原始文本（用于替换）
-        """
-        lines = content.split('\n')
-        ascii_regions = []
-        current_region = {"start_line": -1, "lines": []}
-        
-        # 检查是否在代码块内
-        in_code_block = False
-        
-        for i, line in enumerate(lines):
-            # 检测代码块边界
-            if line.strip().startswith('```'):
-                in_code_block = not in_code_block
-                # 如果进入代码块，结束当前 ASCII 区域
-                if in_code_block and len(current_region["lines"]) >= 3:
-                    ascii_regions.append({
-                        "start_line": current_region["start_line"],
-                        "end_line": i - 1,
-                        "lines": current_region["lines"],
-                        "ascii_content": '\n'.join(current_region["lines"]),
-                        "original_text": '\n'.join(current_region["lines"])
-                    })
-                current_region = {"start_line": -1, "lines": []}
-                continue
-            
-            # 跳过代码块内的内容
-            if in_code_block:
-                continue
-            
-            # 检查是否是需要排除的行
-            is_excluded = (
-                re.match(MARKDOWN_TABLE_PATTERN, line) or 
-                re.match(MARKDOWN_TABLE_SEPARATOR, line) or
-                any(re.match(p, line) for p in EXCLUDE_PATTERNS)
-            )
-            if is_excluded:
-                # 如果当前区域有强特征，继续收集；否则跳过
-                if current_region.get("has_strong_feature"):
-                    current_region["lines"].append(line)
-                continue
-            
-            # 计算该行匹配的特征
-            strong_match = any(re.search(p, line) for p in ASCII_FLOWCHART_STRONG_PATTERNS)
-            weak_match = any(re.search(p, line) for p in ASCII_FLOWCHART_WEAK_PATTERNS)
-            
-            if strong_match or weak_match:
-                if current_region["start_line"] == -1:
-                    current_region["start_line"] = i
-                    current_region["has_strong_feature"] = False
-                current_region["lines"].append(line)
-                # 记录是否有强特征
-                if strong_match:
-                    current_region["has_strong_feature"] = True
-            else:
-                # 当前行不是 ASCII 图的一部分
-                # 必须有强特征且至少3行才算有效的 ASCII 流程图
-                if len(current_region["lines"]) >= 3 and current_region.get("has_strong_feature"):
-                    ascii_regions.append({
-                        "start_line": current_region["start_line"],
-                        "end_line": i - 1,
-                        "lines": current_region["lines"],
-                        "ascii_content": '\n'.join(current_region["lines"]),
-                        "original_text": '\n'.join(current_region["lines"])
-                    })
-                current_region = {"start_line": -1, "lines": [], "has_strong_feature": False}
-        
-        # 处理末尾（同样需要检查强特征）
-        if len(current_region["lines"]) >= 3 and current_region.get("has_strong_feature"):
-            ascii_regions.append({
-                "start_line": current_region["start_line"],
-                "end_line": len(lines) - 1,
-                "lines": current_region["lines"],
-                "ascii_content": '\n'.join(current_region["lines"]),
-                "original_text": '\n'.join(current_region["lines"])
-            })
-        
-        return ascii_regions
-    
-    def preprocess_ascii_flowcharts(self, sections: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """
-        预处理章节内容，将 ASCII 流程图转换为占位符
-        
-        Args:
-            sections: 章节列表
-            
-        Returns:
-            处理后的章节列表
-        """
-        total_converted = 0
-        
-        for section in sections:
-            content = section.get('content', '')
-            section_title = section.get('title', '')
-            
-            # 检测 ASCII 流程图
-            ascii_regions = self.detect_ascii_flowcharts(content)
-            
-            if not ascii_regions:
-                continue
-            
-            logger.info(f"章节 [{section_title}] 检测到 {len(ascii_regions)} 个 ASCII 流程图")
-            
-            # 从后向前替换，避免位置偏移
-            for region in reversed(ascii_regions):
-                # 构建占位符，将 ASCII 内容作为描述
-                # 对 ASCII 内容进行压缩处理，移除多余空格但保留结构
-                ascii_desc = region['ascii_content'].replace('\n', ' | ')
-                # 限制长度，避免占位符过长
-                if len(ascii_desc) > 500:
-                    ascii_desc = ascii_desc[:500] + '...'
-                
-                placeholder = f"[IMAGE: flowchart - 根据以下 ASCII 流程图生成 Mermaid 图表: {ascii_desc}]"
-                
-                # 替换原内容
-                content = content.replace(region['original_text'], placeholder)
-                total_converted += 1
-            
-            section['content'] = content
-        
-        if total_converted > 0:
-            logger.info(f"ASCII 流程图预处理完成: 共转换 {total_converted} 个")
-        
-        return sections
     
     def generate_image(
         self,
@@ -281,8 +118,19 @@ class ArtistAgent:
                 logger.info(f"开始生成【文章内容图】({image_style}): {caption}")
             else:
                 # 兼容旧逻辑：使用默认卡通手绘风格
-                from ..prompts.prompt_manager import get_prompt_manager
-                full_prompt = get_prompt_manager().render_artist_default(prompt, caption)
+                full_prompt = f"""请根据输入内容提取核心主题与要点，生成一张卡通风格的信息图：
+
+采用手绘风格，横版（16:9）构图。
+使用可爱的卡通元素、图标，增强趣味性和视觉记忆。
+所有图像必须使用手绘卡通风格，没有写实风格图画元素。
+信息精简，突出关键词与核心概念，多留白，易于一眼抓住重点。
+如果有敏感人物或者版权内容，画一个相似替代。
+
+输入内容：
+{prompt}
+
+图片说明：{caption}
+"""
                 logger.info(f"开始生成【文章内容图】: {caption}")
             
             result = image_service.generate(
@@ -347,11 +195,6 @@ class ArtistAgent:
             logger.error("没有章节内容，跳过配图生成")
             state['images'] = []
             return state
-        
-        # ========== 新增：ASCII 流程图预处理 ==========
-        # 检测并将 ASCII 流程图转换为占位符，复用现有配图生成流程
-        sections = self.preprocess_ascii_flowcharts(sections)
-        state['sections'] = sections  # 更新 state 中的 sections
         
         outline = state.get('outline', {})
         sections_outline = outline.get('sections', [])
