@@ -166,7 +166,6 @@ class DatabaseService:
                 CREATE INDEX IF NOT EXISTS idx_chunks_type ON knowledge_chunks(chunk_type);
                 CREATE INDEX IF NOT EXISTS idx_images_document_id ON document_images(document_id);
                 CREATE INDEX IF NOT EXISTS idx_history_created_at ON history_records(created_at);
-                CREATE INDEX IF NOT EXISTS idx_history_book_id ON history_records(book_id);
                 CREATE INDEX IF NOT EXISTS idx_books_status ON books(status);
                 CREATE INDEX IF NOT EXISTS idx_books_theme ON books(theme);
                 CREATE INDEX IF NOT EXISTS idx_book_chapters_book_id ON book_chapters(book_id);
@@ -214,6 +213,9 @@ class DatabaseService:
                 if col_name not in book_columns:
                     logger.info(f"迁移数据库：添加 books.{col_name} 列")
                     conn.execute(f"ALTER TABLE books ADD COLUMN {col_name} {col_type}")
+            
+            # 迁移后创建依赖新字段的索引
+            conn.execute('CREATE INDEX IF NOT EXISTS idx_history_book_id ON history_records(book_id)')
     
     # ========== 文档操作 ==========
     
