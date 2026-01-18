@@ -1000,7 +1000,7 @@
                     </button>
                 </div>
             </div>
-            <button class="scan-books-btn" id="scanBooksBtn" style="display: none;" onclick="scanBooks()">
+            <button class="scan-books-btn" id="scanBooksBtn" style="display: none;" onclick="regenerateBooks()">
                 🔄 扫描聚合
             </button>
         </div>
@@ -2491,7 +2491,7 @@
                 }
                 const timeStr = formatTime(record.created_at);
                 const typeMap = { 'tutorial': '教程', 'problem-solution': '问题解决', 'comparison': '对比分析', 'storybook': '绘本' };
-                const lengthMap = { 'short': '短文', 'medium': '中等', 'long': '长文' };
+                const lengthMap = { 'mini': 'Mini', 'short': '短文', 'medium': '中等', 'long': '长文', 'custom': '自定义' };
                 
                 // 归属书籍标签
                 const bookTag = record.book_title 
@@ -2759,22 +2759,22 @@
             window.location.href = `/static/book-reader.html?id=${bookId}`;
         }
         
-        // 扫描聚合书籍
-        async function scanBooks() {
+        // 扫描聚合书籍（重新生成）
+        async function regenerateBooks() {
             const btn = document.getElementById('scanBooksBtn');
             const originalText = btn.innerHTML;
             btn.disabled = true;
             btn.innerHTML = '⏳ 扫描中...';
             
             try {
-                const response = await fetch('/api/books/scan', {
+                const response = await fetch('/api/books/regenerate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
                 });
                 const data = await response.json();
                 
                 if (data.success) {
-                    alert(`扫描完成！\n创建 ${data.books_created || 0} 本新书\n更新 ${data.books_updated || 0} 本书`);
+                    alert(`扫描完成！\n创建 ${data.books_created || 0} 本书\n处理 ${data.blogs_processed || 0} 篇博客`);
                     loadBooks();
                 } else {
                     alert('扫描失败: ' + (data.error || '未知错误'));

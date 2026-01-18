@@ -648,6 +648,22 @@ class DatabaseService:
             logger.info(f"更新博客摘要: {history_id}")
         return updated
     
+    def update_history_book_id(self, history_id: str, book_id: str) -> bool:
+        """
+        更新博客所属书籍
+        
+        Args:
+            history_id: 博客 ID
+            book_id: 书籍 ID
+        """
+        with self.get_connection() as conn:
+            cursor = conn.execute('''
+                UPDATE history_records 
+                SET book_id = ?
+                WHERE id = ?
+            ''', (book_id, history_id))
+            return cursor.rowcount > 0
+    
     # ========== 书籍操作 ==========
     
     def create_book(
@@ -934,6 +950,26 @@ class DatabaseService:
                 LIMIT ? OFFSET ?
             ''', (limit, offset))
             return [dict(row) for row in cursor.fetchall()]
+
+
+    def clear_all_books(self):
+        """
+        清空所有书籍数据（用于重新生成）
+        
+        删除 books 和 book_chapters 表的所有数据
+        """
+        with self.get_connection() as conn:
+            conn.execute('DELETE FROM book_chapters')
+            conn.execute('DELETE FROM books')
+        logger.info("已清空所有书籍数据")
+    
+    def reset_all_blog_book_ids(self):
+        """
+        重置所有博客的 book_id 为 NULL（用于重新生成）
+        """
+        with self.get_connection() as conn:
+            conn.execute('UPDATE history_records SET book_id = NULL')
+        logger.info("已重置所有博客的 book_id")
 
 
 # 全局单例

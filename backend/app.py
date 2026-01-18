@@ -209,40 +209,22 @@ def create_app(config_class=None):
                 book = db_service.get_book(book_id)
                 if book:
                     chapters = db_service.get_book_chapters(book_id)
-                    md = f"- [📖 {book['title']}](/)\n"
+                    md = f"- [**第 0 章 导读**](/)\n"
                     
-                    # 解析 homepage 数据，添加首页章节链接
-                    homepage = {}
-                    if book.get('homepage_content'):
-                        try:
-                            import json
-                            homepage = json.loads(book['homepage_content']) if isinstance(book['homepage_content'], str) else book['homepage_content']
-                        except:
-                            pass
-                    
-                    # 添加首页章节链接
-                    if homepage.get('introduction'):
-                        md += f"  - [📖 项目简介](/#📖-项目简介)\n"
-                    if homepage.get('highlights'):
-                        md += f"  - [✨ 项目亮点](/#✨-项目亮点)\n"
-                    md += f"  - [📑 内容大纲](/#📑-内容大纲)\n"
-                    if homepage.get('target_audience'):
-                        md += f"  - [👥 目标受众](/#👥-目标受众)\n"
-                    if homepage.get('prerequisites'):
-                        md += f"  - [📋 前置要求](/#📋-前置要求)\n"
-                    
-                    # 按章节标题分组
+                    # 按章节索引分组
                     chapter_groups = {}
                     for chapter in chapters:
+                        idx = chapter.get('chapter_index', 0)
                         title = chapter.get('chapter_title', '未分类')
-                        if title not in chapter_groups:
-                            chapter_groups[title] = []
-                        chapter_groups[title].append(chapter)
+                        if idx not in chapter_groups:
+                            chapter_groups[idx] = {'title': title, 'sections': []}
+                        chapter_groups[idx]['sections'].append(chapter)
                     
-                    # 生成 Markdown - 章节标题加粗，小节作为子项
-                    for group_title, sections in chapter_groups.items():
-                        md += f"- **{group_title}**\n"
-                        for section in sections:
+                    # 按章节索引排序，生成章节和小节（不包含导读部分，由前端自动提取）
+                    for idx in sorted(chapter_groups.keys()):
+                        group = chapter_groups[idx]
+                        md += f"- **第 {idx} 章 {group['title']}**\n"
+                        for section in group['sections']:
                             chapter_id = section.get('id', '')
                             section_title = section.get('section_title', '')
                             md += f"  - [{section_title}](/chapter/{chapter_id})\n"
@@ -1552,9 +1534,9 @@ def create_app(config_class=None):
             logger.error(f"获取章节内容失败: {e}", exc_info=True)
             return jsonify({'success': False, 'error': str(e)}), 500
     
-    @app.route('/api/books/scan', methods=['POST'])
-    def scan_books():
-        """扫描博客库，自动聚合成书籍"""
+    @app.route('/api/books/regenerate', methods=['POST'])
+    def regenerate_books():
+        """重新生成所有书籍（清空旧数据，重新聚合）"""
         try:
             from services.book_scanner_service import BookScannerService
             
@@ -1562,14 +1544,14 @@ def create_app(config_class=None):
             llm_service = get_llm_service()
             
             scanner = BookScannerService(db_service, llm_service)
-            result = scanner.scan_and_update_books()
+            result = scanner.regenerate_all_books()
             
             return jsonify({
                 'success': True,
                 **result
             })
         except Exception as e:
-            logger.error(f"扫描书籍失败: {e}", exc_info=True)
+            logger.error(f"重新生成书籍失败: {e}", exc_info=True)
             return jsonify({'success': False, 'error': str(e)}), 500
     
     @app.route('/api/books/<book_id>/rescan', methods=['POST'])

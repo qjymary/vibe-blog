@@ -362,6 +362,36 @@ class PromptManager:
             chapters=chapters
         )
     
+    def render_book_classifier(
+        self,
+        existing_books_info: str,
+        blogs_info: str,
+        reference_books_info: str = ""
+    ) -> str:
+        """渲染博客分类 Prompt（第一步：只做分类）"""
+        return self.render(
+            'book_classifier',
+            existing_books_info=existing_books_info,
+            blogs_info=blogs_info,
+            reference_books_info=reference_books_info
+        )
+    
+    def render_book_outline_generator(
+        self,
+        book_title: str,
+        book_theme: str,
+        book_description: str,
+        blogs_info: str
+    ) -> str:
+        """渲染书籍大纲生成 Prompt（第二步：生成大纲）"""
+        return self.render(
+            'book_outline_generator',
+            book_title=book_title,
+            book_theme=book_theme,
+            book_description=book_description,
+            blogs_info=blogs_info
+        )
+    
     def render_outline_expander(
         self,
         book: dict,

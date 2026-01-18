@@ -511,7 +511,7 @@
             }
             
             try {
-                const response = await fetch('/api/books/scan', {
+                const response = await fetch('/api/books/regenerate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
                 });
