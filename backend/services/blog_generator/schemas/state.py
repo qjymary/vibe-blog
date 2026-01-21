@@ -120,7 +120,7 @@ class SharedState(TypedDict):
     topic: str
     article_type: Literal["problem-solution", "tutorial", "comparison"]
     target_audience: Literal["beginner", "intermediate", "advanced"]
-    audience_adaptation: str  # 受众适配类型: technical-beginner/high-school/children/professional
+    audience_adaptation: str  # 受众适配类型: default/high-school/children/professional
     target_length: Literal["mini", "short", "medium", "long", "custom"]
     source_material: Optional[str]
     image_style: str  # 图片风格 ID
@@ -208,7 +208,7 @@ def create_initial_state(
     topic: str,
     article_type: str = "tutorial",
     target_audience: str = "intermediate",
-    audience_adaptation: str = "technical-beginner",
+    audience_adaptation: str = "default",
     target_length: str = "medium",
     source_material: str = None,
     document_ids: List[str] = None,

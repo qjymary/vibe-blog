@@ -82,7 +82,7 @@ class BlogService:
         topic: str,
         article_type: str = "tutorial",
         target_audience: str = "intermediate",
-        audience_adaptation: str = "technical-beginner",
+        audience_adaptation: str = "default",
         target_length: str = "medium",
         source_material: str = None,
         document_ids: list = None,
@@ -101,7 +101,7 @@ class BlogService:
             topic: 技术主题
             article_type: 文章类型
             target_audience: 目标受众
-            audience_adaptation: 受众适配类型 (technical-beginner/high-school/children/professional)
+            audience_adaptation: 受众适配类型 (default/high-school/children/professional)
             target_length: 目标长度 (mini/short/medium/long/custom)
             source_material: 参考资料
             document_ids: 文档 ID 列表

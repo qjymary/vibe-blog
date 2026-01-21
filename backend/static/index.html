@@ -853,7 +853,7 @@
                         outline: none;
                         min-width: 120px;
                     ">
-                        <option value="technical-beginner">🤓 技术小白</option>
+                        <option value="default">🎯 默认风格</option>
                         <option value="high-school">📚 高中生版</option>
                         <option value="children">🧒 儿童版</option>
                         <option value="professional">💼 职场版</option>
@@ -2883,7 +2883,7 @@
         // 获取受众适配
         function getAudienceAdaptation() {
             const select = document.getElementById('audienceAdaptationSelect');
-            return select ? select.value : 'technical-beginner';
+            return select ? select.value : 'default';
         }
         
         // 获取选中的图片风格

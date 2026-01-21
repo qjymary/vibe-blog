@@ -975,7 +975,7 @@ def create_app(config_class=None):
             
             article_type = data.get('article_type', 'tutorial')
             target_audience = data.get('target_audience', 'intermediate')
-            audience_adaptation = data.get('audience_adaptation', 'technical-beginner')  # 新增受众适配参数
+            audience_adaptation = data.get('audience_adaptation', 'default')  # 新增受众适配参数
             target_length = data.get('target_length', 'medium')
             source_material = data.get('source_material', None)
             document_ids = data.get('document_ids', [])  # 文档 ID 列表
@@ -1084,7 +1084,7 @@ def create_app(config_class=None):
                 return jsonify({'success': False, 'error': '请提供 topic 参数'}), 400
             
             article_type = data.get('article_type', 'tutorial')
-            audience_adaptation = data.get('audience_adaptation', 'technical-beginner')  # 新增受众适配参数
+            audience_adaptation = data.get('audience_adaptation', 'default')  # 新增受众适配参数
             generate_cover_video = data.get('generate_cover_video', False)
             
             logger.info(f"📝 Mini 博客生成请求: topic={topic}, article_type={article_type}, audience_adaptation={audience_adaptation}, generate_cover_video={generate_cover_video}")
