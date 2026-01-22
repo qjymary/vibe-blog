@@ -151,6 +151,12 @@ class OSSService:
                 headers['Content-Type'] = 'image/gif'
             elif local_path.lower().endswith('.webp'):
                 headers['Content-Type'] = 'image/webp'
+            elif local_path.lower().endswith('.mp4'):
+                headers['Content-Type'] = 'video/mp4'
+            elif local_path.lower().endswith('.webm'):
+                headers['Content-Type'] = 'video/webm'
+            elif local_path.lower().endswith('.mov'):
+                headers['Content-Type'] = 'video/quicktime'
             
             # 上传文件
             with open(local_path, 'rb') as f:
@@ -244,6 +250,169 @@ class OSSService:
             公网 URL
         """
         return f"https://{self.bucket_name}.{self.endpoint}/{remote_path}"
+    
+    def upload_from_url(
+        self,
+        source_url: str,
+        remote_path: str,
+        content_type: str = None
+    ) -> Dict[str, Any]:
+        """
+        从 URL 直接上传到 OSS（服务端拷贝，不经过本地）
+        
+        Args:
+            source_url: 源文件 URL（必须公网可访问）
+            remote_path: OSS 上的目标路径
+            content_type: 内容类型（可选）
+            
+        Returns:
+            {'success': True, 'url': '...', 'remote_path': '...'}
+        """
+        if not self.is_available:
+            return {'success': False, 'error': 'OSS 服务不可用'}
+        
+        try:
+            import requests
+            
+            # 下载文件内容到内存
+            response = requests.get(source_url, timeout=60, stream=True)
+            response.raise_for_status()
+            
+            # 自动检测 Content-Type
+            if not content_type:
+                content_type = response.headers.get('Content-Type', 'application/octet-stream')
+            
+            headers = {'Content-Type': content_type}
+            
+            # 直接上传到 OSS（从内存，不写本地文件）
+            self._bucket.put_object(remote_path, response.content, headers=headers)
+            
+            public_url = self.get_public_url(remote_path)
+            logger.info(f"URL 直接上传 OSS 成功: {source_url[:50]}... -> {public_url}")
+            
+            return {
+                'success': True,
+                'url': public_url,
+                'remote_path': remote_path
+            }
+            
+        except Exception as e:
+            logger.error(f"URL 直接上传 OSS 失败: {e}")
+            return {'success': False, 'error': str(e)}
+    
+    def upload_image_from_url(
+        self,
+        source_url: str
+    ) -> Dict[str, Any]:
+        """
+        从 URL 直接上传图片到 OSS（不经过本地）
+        
+        Args:
+            source_url: 源图片 URL
+            
+        Returns:
+            {'success': True, 'url': '...'}
+        """
+        if not self.is_available:
+            return {'success': False, 'error': 'OSS 服务不可用'}
+        
+        # 从 URL 提取文件扩展名
+        from urllib.parse import urlparse, unquote
+        parsed = urlparse(source_url)
+        path = unquote(parsed.path)
+        ext = os.path.splitext(path)[1] or '.png'
+        
+        # 生成远程路径
+        timestamp = datetime.now().strftime('%Y%m%d')
+        unique_id = uuid.uuid4().hex[:8]
+        filename = f"img_{unique_id}{ext}"
+        remote_path = f"vibe-blog/images/{timestamp}/{filename}"
+        
+        return self.upload_from_url(source_url, remote_path)
+    
+    def upload_video_from_url(
+        self,
+        source_url: str
+    ) -> Dict[str, Any]:
+        """
+        从 URL 直接上传视频到 OSS（不经过本地）
+        
+        Args:
+            source_url: 源视频 URL
+            
+        Returns:
+            {'success': True, 'url': '...'}
+        """
+        if not self.is_available:
+            return {'success': False, 'error': 'OSS 服务不可用'}
+        
+        # 从 URL 提取文件扩展名
+        from urllib.parse import urlparse, unquote
+        parsed = urlparse(source_url)
+        path = unquote(parsed.path)
+        ext = os.path.splitext(path)[1] or '.mp4'
+        
+        # 生成远程路径
+        timestamp = datetime.now().strftime('%Y%m%d')
+        unique_id = uuid.uuid4().hex[:8]
+        filename = f"video_{unique_id}{ext}"
+        remote_path = f"vibe-blog/videos/{timestamp}/{filename}"
+        
+        return self.upload_from_url(source_url, remote_path)
+    
+    def get_thumbnail_url(
+        self,
+        oss_url: str,
+        width: int = None,
+        height: int = None,
+        quality: int = None,
+        format: str = None
+    ) -> str:
+        """
+        获取 OSS 图片的缩略图 URL（利用 OSS 图片处理服务）
+        
+        Args:
+            oss_url: OSS 图片原始 URL
+            width: 缩略图宽度（等比缩放）
+            height: 缩略图高度（等比缩放）
+            quality: 图片质量 1-100
+            format: 输出格式 (jpg, png, webp, gif)
+            
+        Returns:
+            带图片处理参数的 URL
+            
+        示例:
+            get_thumbnail_url(url, width=200) -> url?x-oss-process=image/resize,w_200
+            get_thumbnail_url(url, width=200, height=200) -> url?x-oss-process=image/resize,m_fill,w_200,h_200
+        """
+        if not oss_url:
+            return oss_url
+        
+        params = []
+        
+        # 缩放参数
+        if width and height:
+            # 同时指定宽高，使用填充模式
+            params.append(f"resize,m_fill,w_{width},h_{height}")
+        elif width:
+            params.append(f"resize,w_{width}")
+        elif height:
+            params.append(f"resize,h_{height}")
+        
+        # 质量参数
+        if quality:
+            params.append(f"quality,q_{quality}")
+        
+        # 格式转换
+        if format:
+            params.append(f"format,{format}")
+        
+        if not params:
+            return oss_url
+        
+        process_str = "image/" + "/".join(params)
+        separator = "&" if "?" in oss_url else "?"
+        return f"{oss_url}{separator}x-oss-process={process_str}"
 
 
 # 全局服务实例

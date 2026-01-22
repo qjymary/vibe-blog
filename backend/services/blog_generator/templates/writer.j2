@@ -80,9 +80,12 @@
 
 ### 4. 配图位置标记
 - 在需要插入图片的位置标注: [IMAGE: {image_type} - {description}]
+- **优先使用流程图替代代码**：能用 Mermaid 流程图表达的逻辑，用 [IMAGE: flowchart - xxx] 而不是 [CODE: xxx]
+- 只有在必须展示具体代码语法时才使用代码块
 - 在需要插入代码的位置标注: [CODE: {{ section_outline.id }}_code_{序号} - {description}]
   - 例如: [CODE: {{ section_outline.id }}_code_1 - Redis 连接示例]
   - 序号从 1 开始递增，确保每个代码块 ID 全局唯一
+  - **每个章节最多 1 个代码块**
 
 ### 5. 引用块使用
 - 关键结论用 > 引用块突出

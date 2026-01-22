@@ -1,0 +1,55 @@
+# 知乎专栏发布配置
+
+platform:
+  id: zhihu
+  name: 知乎
+  editor_url: https://zhuanlan.zhihu.com/write
+  cookie_domain: .zhihu.com
+
+# 登录检测
+login_check:
+  type: url_not_contains
+  value: login
+
+# 内容上传方式：通过导入文档功能
+content_upload:
+  type: import_doc
+  steps:
+    - action: click
+      name: 点击更多按钮
+      selector: '#Popover3-toggle'
+      wait_after: 1000
+    - action: click
+      name: 点击导入文档
+      selector: '.Editable-toolbarMenuItem:nth-child(1)'
+      wait_after: 1000
+    - action: file_upload
+      name: 上传 Markdown 文件
+      selector: 'input[accept=".docx,.doc,.markdown,.mdown,.mkdn,.md"]'
+      wait_after: 5000
+
+# 发布工作流
+workflow:
+  - action: js_click
+    name: 打开发布面板
+    script: document.querySelector('.PublishPanel-triggerButton')?.click()
+    wait_after: 3000
+    
+  - action: js_click
+    name: 点击下一步
+    script: document.querySelector('.PublishPanel-stepOneButton > button')?.click()
+    wait_after: 2000
+    
+  - action: js_click
+    name: 最终发布
+    script: document.querySelector('.PublishPanel-stepTwoButton')?.click()
+    wait_after: 5000
+
+# 获取发布后的文章 URL
+result_url:
+  type: current_url
+
+# 脚注配置
+footer:
+  enabled: true
+  text: "\n\n> 本文由 [Vibe-Blog](https://github.com/your-repo/vibe-blog) 自动发布"

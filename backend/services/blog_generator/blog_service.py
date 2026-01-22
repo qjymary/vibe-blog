@@ -515,9 +515,16 @@ class BlogService:
             # 如果有封面图，在 Markdown 中插入封面图
             markdown_with_cover = markdown_content
             if cover_image_path and markdown_content:
-                cover_filename = os.path.basename(cover_image_path)
                 title = outline.get('title', topic)
-                cover_section = f"\n![{title} - 架构图](./images/{cover_filename})\n\n---\n\n"
+                # 判断是 OSS URL 还是本地路径
+                if cover_image_path.startswith('http'):
+                    # OSS URL，直接使用
+                    cover_image_ref = cover_image_path
+                else:
+                    # 本地路径，使用相对路径
+                    cover_filename = os.path.basename(cover_image_path)
+                    cover_image_ref = f"./images/{cover_filename}"
+                cover_section = f"\n![{title} - 架构图]({cover_image_ref})\n\n---\n\n"
                 # 在第一个 ## 之前插入封面图
                 lines = markdown_content.split('\n')
                 insert_idx = 0
@@ -714,16 +721,19 @@ class BlogService:
                 download=True
             )
             
-            if result and result.local_path:
-                logger.info(f"封面图生成成功: {result.local_path}")
+            if result and (result.oss_url or result.local_path):
+                # 优先使用 OSS URL
+                final_url = result.oss_url or result.url
+                final_path = result.oss_url or result.local_path  # OSS URL 作为路径存储
+                logger.info(f"封面图生成成功: {final_url}")
                 if task_manager and task_id:
                     task_manager.send_event(task_id, 'log', {
                         'level': 'INFO',
                         'logger': 'blog_service',
                         'message': f'封面架构图生成完成'
                     })
-                # 返回 (外网URL, 本地路径, 文章摘要) 元组
-                return (result.url, result.local_path, article_summary)
+                # 返回 (外网URL, 路径/OSS URL, 文章摘要) 元组
+                return (final_url, final_path, article_summary)
             else:
                 logger.warning("封面图生成失败，未获取到图片路径")
                 # 即使封面图生成失败，也返回摘要
@@ -804,9 +814,14 @@ class BlogService:
                 logger.warning("视频生成失败")
                 return None
             
-            # 构建视频访问 URL
-            video_filename = os.path.basename(result.local_path) if result.local_path else None
-            video_access_url = f"/outputs/videos/{video_filename}" if video_filename else result.url
+            # 优先使用 OSS URL，否则使用本地路径
+            if result.oss_url:
+                video_access_url = result.oss_url
+            elif result.local_path:
+                video_filename = os.path.basename(result.local_path)
+                video_access_url = f"/outputs/videos/{video_filename}"
+            else:
+                video_access_url = result.url
             
             logger.info(f"封面动画生成成功: {video_access_url}")
             

@@ -295,9 +295,11 @@ class ArtistAgent:
                 max_wait_time=600
             )
             
-            if result and result.local_path:
-                logger.info(f"AI 图片生成成功: {result.local_path}")
-                return result.local_path
+            if result and (result.oss_url or result.local_path):
+                # 优先返回 OSS URL
+                final_path = result.oss_url or result.local_path
+                logger.info(f"AI 图片生成成功: {final_path}")
+                return final_path
             else:
                 logger.warning(f"AI 图片生成失败: {caption}")
                 return None
@@ -329,6 +331,67 @@ class ArtistAgent:
         
         return placeholders
     
+    def detect_missing_diagrams(
+        self,
+        sections: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """
+        检测章节中缺失的图表
+        
+        Args:
+            sections: 章节列表
+            
+        Returns:
+            需要补充的图表任务列表
+        """
+        diagram_tasks = []
+        pm = get_prompt_manager()
+        
+        for section_idx, section in enumerate(sections):
+            content = section.get('content', '')
+            title = section.get('title', '')
+            
+            # 跳过已有足够图片的章节（已有 2 个以上图片占位符）
+            existing_placeholders = self.extract_image_placeholders(content)
+            if len(existing_placeholders) >= 2:
+                continue
+            
+            # 跳过内容过短的章节
+            if len(content) < 500:
+                continue
+            
+            try:
+                # 调用 LLM 检测缺失图表
+                prompt = pm.render_missing_diagram_detector(
+                    section_title=title,
+                    content=content[:3000]  # 限制内容长度
+                )
+                
+                response = self.llm.chat(
+                    messages=[{"role": "user", "content": prompt}],
+                    response_format={"type": "json_object"}
+                )
+                
+                result = json.loads(response)
+                needs_diagrams = result.get('needs_diagrams', [])
+                
+                # 每个章节最多补充 1 个图表
+                if needs_diagrams:
+                    item = needs_diagrams[0]
+                    diagram_tasks.append({
+                        'section_idx': section_idx,
+                        'image_type': item.get('diagram_type', 'flowchart'),
+                        'description': item.get('description', ''),
+                        'context': item.get('context', content[:1000])
+                    })
+                    logger.info(f"章节 [{title}] 检测到缺失图表: {item.get('diagram_type')}")
+                    
+            except Exception as e:
+                logger.warning(f"检测缺失图表失败 [{title}]: {e}")
+                continue
+        
+        return diagram_tasks
+    
     def run(self, state: Dict[str, Any], max_workers: int = None) -> Dict[str, Any]:
         """
         执行配图生成（并行）
@@ -355,6 +418,13 @@ class ArtistAgent:
         # 检测并将 ASCII 流程图转换为占位符，复用现有配图生成流程
         sections = self.preprocess_ascii_flowcharts(sections)
         state['sections'] = sections  # 更新 state 中的 sections
+        
+        # ========== 新增：缺失图表检测 ==========
+        # 用 LLM 分析内容，检测需要补图的位置
+        missing_diagram_tasks = self.detect_missing_diagrams(sections)
+        
+        if missing_diagram_tasks:
+            logger.info(f"检测到 {len(missing_diagram_tasks)} 个缺失图表位置")
         
         outline = state.get('outline', {})
         sections_outline = outline.get('sections', [])
@@ -417,6 +487,23 @@ class ArtistAgent:
                 })
                 image_id_counter += 1
         
+        # 3. 从缺失图表检测收集配图任务
+        for task in missing_diagram_tasks:
+            section_idx = task['section_idx']
+            section_title = sections[section_idx].get('title', '') if section_idx < len(sections) else ''
+            
+            tasks.append({
+                'order_idx': len(tasks),
+                'image_id': f"img_{image_id_counter}",
+                'section_idx': section_idx,
+                'source': 'missing_diagram',
+                'image_type': task['image_type'],
+                'description': task['description'],
+                'context': f"章节标题: {section_title}\n\n相关内容:\n{task['context']}",
+                'audience_adaptation': state.get('audience_adaptation', 'technical-beginner')
+            })
+            image_id_counter += 1
+        
         if not tasks:
             logger.info("没有配图任务，跳过配图生成")
             state['images'] = []
@@ -436,6 +523,7 @@ class ArtistAgent:
         def generate_task(task):
             """单个图片生成任务"""
             try:
+                # 生成图片
                 image = self.generate_image(
                     image_type=task['image_type'],
                     description=task['description'],
@@ -456,7 +544,9 @@ class ArtistAgent:
                         image_style=image_style
                     )
                     if rendered_path:
-                        rendered_path = f"./images/{rendered_path.split('/')[-1]}"
+                        # 如果是 OSS URL，直接使用；否则转为相对路径
+                        if not rendered_path.startswith('http'):
+                            rendered_path = f"./images/{rendered_path.split('/')[-1]}"
                 
                 return {
                     'success': True,

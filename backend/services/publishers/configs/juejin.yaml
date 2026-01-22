@@ -1,0 +1,59 @@
+# 掘金平台发布配置
+
+platform:
+  id: juejin
+  name: 掘金
+  editor_url: https://juejin.cn/editor/drafts/new
+  cookie_domain: .juejin.cn
+
+# 登录检测
+login_check:
+  type: url_not_contains
+  value: login
+
+# 内容上传方式：通过 CodeMirror API
+content_upload:
+  type: codemirror
+  title_selector: .title-input
+  content_selector: .CodeMirror
+
+# 发布工作流
+workflow:
+  - action: click
+    name: 打开发布面板
+    selector: .publish-popup
+    wait_for: .publish-popup .panel
+    wait_after: 1000
+    
+  - action: click_by_text
+    name: 选择分类
+    container: .category-list
+    item_selector: .item
+    text: "{{category}}"
+    optional: true
+    wait_after: 500
+    
+  - action: tag_input
+    name: 输入标签
+    click_selector: .tag-input .byte-select__placeholder
+    type_delay: 100
+    select_selector: .byte-select-option--hover
+    optional: true
+    wait_after: 1000
+    
+  - action: click
+    name: 确认发布
+    selector: .footer button:nth-child(2)
+    wait_after: 5000
+
+# 获取发布后的文章 URL
+result_url:
+  type: js_eval
+  script: |
+    const el = document.querySelector('a.title');
+    return el ? 'https://juejin.cn' + el.getAttribute('href') : null;
+
+# 脚注配置
+footer:
+  enabled: true
+  text: "\n\n> 本文由 [Vibe-Blog](https://github.com/your-repo/vibe-blog) 自动发布"

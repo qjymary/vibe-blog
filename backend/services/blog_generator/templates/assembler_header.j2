@@ -7,8 +7,11 @@
 > {{ core_value }}
 
 ## 目录
-{% for item in table_of_contents %}
-- [{{ item }}](#{{ item | lower | replace(' ', '-') | replace('：', '') | replace(':', '') }})
+{% for section in sections %}
+- [{{ section.title }}](#{{ section.title | lower | replace(' ', '-') | replace('：', '') | replace(':', '') }})
+{% for subheading in section.subheadings %}
+  - {{ subheading }}
+{% endfor %}
 {% endfor %}
 
 ---

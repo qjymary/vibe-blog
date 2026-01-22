@@ -33,6 +33,7 @@ class VideoResult:
     url: str
     local_path: Optional[str] = None
     task_id: Optional[str] = None
+    oss_url: Optional[str] = None  # OSS 公网 URL
 
 
 class Veo3Service:
@@ -91,7 +92,8 @@ class Veo3Service:
         model: Optional[str] = None,
         download: bool = True,
         max_wait_time: int = 600,
-        progress_callback: callable = None
+        progress_callback: callable = None,
+        max_retries: int = 1
     ) -> Optional[VideoResult]:
         """
         从图片生成动画视频
@@ -104,67 +106,82 @@ class Veo3Service:
             download: 是否下载到本地
             max_wait_time: 最大等待时间（秒）
             progress_callback: 进度回调函数 callback(progress: int, status: str)
+            max_retries: 最大重试次数（默认1次）
 
         Returns:
             VideoResult 或 None
         """
-        try:
-            use_model = model or self.model
-            use_prompt = prompt or self.get_default_animation_prompt()
-            
-            logger.info(f"开始生成视频: {image_url[:80]}...")
-            
-            # 提交任务
-            result = self._create_video_task(
-                model=use_model,
-                prompt=use_prompt,
-                first_frame_url=image_url,
-                aspect_ratio=aspect_ratio
-            )
-            
-            # 检查 API 返回
-            if result.get('code') != 0:
-                logger.error(f"API 返回错误: {result}")
-                return None
-            
-            data = result.get('data') or {}
-            task_id = data.get('id')
-            if not task_id:
-                logger.error(f"未获取到任务ID: {result}")
-                return None
-            
-            logger.info(f"视频任务已提交: {task_id}")
-            
-            # 等待完成
-            final_result = self._wait_for_completion(
-                task_id, 
-                max_wait_time,
-                progress_callback=progress_callback
-            )
-            
-            # 获取视频 URL
-            video_data = final_result.get('data', {})
-            video_url = video_data.get('url')
-            if not video_url:
-                logger.error("未获取到视频 URL")
-                return None
-            
-            logger.info(f"视频生成成功: {video_url}")
-            
-            # 下载视频
-            local_path = None
-            if download:
-                local_path = self._download_video(video_url)
-            
-            return VideoResult(
-                url=video_url,
-                local_path=local_path,
-                task_id=task_id
-            )
-            
-        except Exception as e:
-            logger.error(f"视频生成失败: {e}", exc_info=True)
-            return None
+        use_model = model or self.model
+        use_prompt = prompt or self.get_default_animation_prompt()
+        
+        last_error = None
+        for attempt in range(max_retries + 1):
+            try:
+                if attempt > 0:
+                    logger.info(f"视频生成重试 ({attempt}/{max_retries}): {image_url[:50]}...")
+                else:
+                    logger.info(f"开始生成视频: {image_url[:80]}...")
+                
+                # 提交任务
+                result = self._create_video_task(
+                    model=use_model,
+                    prompt=use_prompt,
+                    first_frame_url=image_url,
+                    aspect_ratio=aspect_ratio
+                )
+                
+                # 检查 API 返回
+                if result.get('code') != 0:
+                    logger.error(f"API 返回错误: {result}")
+                    last_error = f"API 返回错误: {result}"
+                    continue
+                
+                data = result.get('data') or {}
+                task_id = data.get('id')
+                if not task_id:
+                    logger.error(f"未获取到任务ID: {result}")
+                    last_error = f"未获取到任务ID: {result}"
+                    continue
+                
+                logger.info(f"视频任务已提交: {task_id}")
+                
+                # 等待完成
+                final_result = self._wait_for_completion(
+                    task_id, 
+                    max_wait_time,
+                    progress_callback=progress_callback
+                )
+                
+                # 获取视频 URL
+                video_data = final_result.get('data', {})
+                video_url = video_data.get('url')
+                if not video_url:
+                    logger.error("未获取到视频 URL")
+                    last_error = "未获取到视频 URL"
+                    continue
+                
+                logger.info(f"视频生成成功: {video_url}")
+                
+                # 直接上传到 OSS（不经过本地）
+                oss_url = None
+                if download:
+                    upload_result = self._upload_to_oss(video_url)
+                    oss_url = upload_result.get('oss_url')
+                
+                return VideoResult(
+                    url=video_url,
+                    local_path=None,
+                    task_id=task_id,
+                    oss_url=oss_url
+                )
+                
+            except Exception as e:
+                last_error = str(e)
+                logger.error(f"视频生成失败 (尝试 {attempt + 1}/{max_retries + 1}): {e}", exc_info=True)
+                continue
+        
+        logger.error(f"视频生成最终失败，已重试 {max_retries} 次: {last_error}")
+        return None
 
     def _create_video_task(
         self,
@@ -254,25 +271,27 @@ class Veo3Service:
 
             time.sleep(poll_interval)
 
-    def _download_video(self, video_url: str) -> str:
-        """下载视频到本地"""
-        # 从 URL 提取文件名
-        filename = video_url.split('/')[-1].split('?')[0]
-        if not filename or '.' not in filename:
-            filename = f"video_{int(time.time())}.mp4"
-
-        file_path = os.path.join(self.output_folder, filename)
-
-        response = requests.get(video_url, timeout=120, stream=True)
-        response.raise_for_status()
-
-        with open(file_path, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
-
-        file_size = os.path.getsize(file_path)
-        logger.info(f"视频已保存: {file_path} (大小: {file_size / 1024 / 1024:.2f}MB)")
-        return file_path
+    def _upload_to_oss(self, video_url: str) -> dict:
+        """
+        直接将视频 URL 上传到 OSS（不经过本地文件）
+        
+        Returns:
+            {'oss_url': str or None}
+        """
+        from .oss_service import get_oss_service
+        oss_service = get_oss_service()
+        
+        if oss_service and oss_service.is_available:
+            oss_result = oss_service.upload_video_from_url(video_url)
+            if oss_result.get('success'):
+                oss_url = oss_result.get('url')
+                logger.info(f"视频已直接上传到 OSS: {oss_url}")
+                return {'oss_url': oss_url}
+            else:
+                logger.warning(f"视频上传 OSS 失败: {oss_result.get('error')}")
+        
+        # OSS 不可用或上传失败
+        return {'oss_url': None}
 
 
 # 全局服务实例
