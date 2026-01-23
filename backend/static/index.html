@@ -1051,7 +1051,7 @@
         
         // 历史记录分页状态
         let historyCurrentPage = 1;
-        let historyPageSize = 12;
+        let historyPageSize = 50;
         let historyTotalPages = 1;
         let historyTotal = 0;
         
@@ -1970,6 +1970,9 @@
                             <button class="download-markdown-btn" style="padding: 8px 16px; background: linear-gradient(135deg, #4ECDC4, #44A08D); border: none; border-radius: 8px; color: #fff; font-size: 13px; cursor: pointer;">
                                 📥 下载 Markdown
                             </button>
+                            <button class="publish-btn" style="padding: 8px 16px; background: linear-gradient(135deg, #6366F1, #8B5CF6); border: none; border-radius: 8px; color: #fff; font-size: 13px; cursor: pointer;">
+                                🚀 发布到平台
+                            </button>
                         </div>
                     </div>
                     <div class="markdown-body" id="markdownContent"></div>
@@ -1979,8 +1982,9 @@
                 // 为按钮添加事件监听器
                 const downloadBtn = markdownEl.querySelector('.download-markdown-btn');
                 const exportBtn = markdownEl.querySelector('.export-image-btn');
+                const publishBtn = markdownEl.querySelector('.publish-btn');
                 
-                console.log('[displayBlogResult] 查找按钮:', { downloadBtn, exportBtn });
+                console.log('[displayBlogResult] 查找按钮:', { downloadBtn, exportBtn, publishBtn });
                 
                 if (downloadBtn) {
                     downloadBtn.addEventListener('click', downloadMarkdown);
@@ -1989,6 +1993,10 @@
                 if (exportBtn) {
                     exportBtn.addEventListener('click', exportMarkdownAsImage);
                     console.log('[displayBlogResult] 导出按钮事件监听器已添加');
+                }
+                if (publishBtn) {
+                    publishBtn.addEventListener('click', showPublishModal);
+                    console.log('[displayBlogResult] 发布按钮事件监听器已添加');
                 }
                 
                 // 使用 marked.js 渲染 Markdown
@@ -2506,10 +2514,21 @@
                 // 优先显示视频（循环播放），否则显示图片
                 let coverHtml = '📝';
                 if (record.cover_video) {
-                    const videoSrc = record.cover_video.startsWith('/') ? record.cover_video : `/outputs/videos/${record.cover_video.split('/').pop()}`;
+                    // 支持 OSS URL（http 开头）和本地路径
+                    const videoSrc = record.cover_video.startsWith('http') 
+                        ? record.cover_video 
+                        : (record.cover_video.startsWith('/') ? record.cover_video : `/outputs/videos/${record.cover_video.split('/').pop()}`);
                     coverHtml = `<video src="${videoSrc}" autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover;"></video>`;
                 } else if (record.cover_image) {
-                    coverHtml = `<img src="/outputs/images/${record.cover_image.split('/').pop()}" alt="封面">`;
+                    // 支持 OSS URL（http 开头）和本地路径
+                    let imageSrc = record.cover_image.startsWith('http') 
+                        ? record.cover_image 
+                        : `/outputs/images/${record.cover_image.split('/').pop()}`;
+                    // OSS 图片使用缩略图（宽度 400px）
+                    if (imageSrc.includes('.aliyuncs.com')) {
+                        imageSrc += (imageSrc.includes('?') ? '&' : '?') + 'x-oss-process=image/resize,w_400';
+                    }
+                    coverHtml = `<img src="${imageSrc}" alt="封面" loading="lazy">`;
                 }
                 const timeStr = formatTime(record.created_at);
                 const typeMap = { 'tutorial': '教程', 'problem-solution': '问题解决', 'comparison': '对比分析', 'storybook': '绘本' };
@@ -3505,6 +3524,189 @@
                 }
             });
         });
+        
+        // ========== 多平台发布功能 ==========
+        
+        // 显示发布弹窗
+        function showPublishModal() {
+            if (!currentBlogResult || !currentBlogResult.markdown) {
+                alert('没有可发布的内容');
+                return;
+            }
+            
+            const modal = document.createElement('div');
+            modal.className = 'publish-modal';
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.5); z-index: 1000;
+                display: flex; align-items: center; justify-content: center;
+            `;
+            
+            modal.innerHTML = `
+                <div style="
+                    background: white; border-radius: 16px; padding: 24px;
+                    max-width: 500px; width: 90%;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                ">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 style="margin: 0; font-size: 18px; color: #333;">🚀 发布到平台</h2>
+                        <button onclick="this.closest('.publish-modal').remove()" style="
+                            background: none; border: none; font-size: 24px; cursor: pointer; color: #999;
+                        ">×</button>
+                    </div>
+                    
+                    <div style="margin-bottom: 16px;">
+                        <label style="display: block; font-size: 13px; color: #666; margin-bottom: 6px;">选择平台</label>
+                        <select id="publishPlatformSelect" style="
+                            width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px;
+                            font-size: 14px; background: #f9f9f9;
+                        ">
+                            <option value="csdn">CSDN</option>
+                            <option value="zhihu">知乎</option>
+                            <option value="juejin">掘金</option>
+                        </select>
+                    </div>
+                    
+                    <div style="margin-bottom: 16px;">
+                        <label style="display: block; font-size: 13px; color: #666; margin-bottom: 6px;">
+                            Cookie
+                            <a href="javascript:void(0)" onclick="showCookieHelp()" style="color: #6366F1; margin-left: 8px;">如何获取？</a>
+                        </label>
+                        <textarea id="publishCookieInput" placeholder='直接粘贴浏览器复制的 Cookie，如：name=value; name2=value2; ...' style="
+                            width: 100%; height: 120px; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px;
+                            font-size: 12px; font-family: monospace; resize: vertical;
+                        "></textarea>
+                        <div style="margin-top: 8px; padding: 10px 12px; background: #FFF3CD; border: 1px solid #FFE69C; border-radius: 6px; font-size: 12px; color: #856404;">
+                            ⚠️ <strong>安全提示：</strong>服务端不会存储您的 Cookie，仅用于本次发布。Cookie 包含您的登录凭证，请<strong>再三确认</strong>后再输入。
+                        </div>
+                    </div>
+                    
+                    <div id="cookieHelpPanel" style="display: none; background: #f5f5f5; border-radius: 8px; padding: 12px; margin-bottom: 16px; font-size: 12px; color: #666;">
+                        <strong>获取 Cookie 步骤：</strong><br>
+                        1. 在浏览器登录目标平台（如 CSDN）<br>
+                        2. 按 F12 打开开发者工具<br>
+                        3. 切换到 Application → Cookies<br>
+                        4. 选择对应域名，复制所有 Cookie<br>
+                        5. 或安装 "EditThisCookie" 扩展一键导出 JSON
+                    </div>
+                    
+                    <button onclick="doPublish()" style="
+                        width: 100%; padding: 12px; background: linear-gradient(135deg, #6366F1, #8B5CF6);
+                        border: none; border-radius: 10px; color: white; font-size: 14px; cursor: pointer;
+                    ">🚀 立即发布</button>
+                    
+                    <div id="publishStatus" style="margin-top: 12px; font-size: 13px; text-align: center; display: none;"></div>
+                </div>
+            `;
+            
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.remove();
+            });
+            
+            document.body.appendChild(modal);
+        }
+        
+        // 显示 Cookie 获取帮助
+        function showCookieHelp() {
+            const panel = document.getElementById('cookieHelpPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        // 解析原始 Cookie 字符串为数组格式
+        function parseCookieString(cookieStr, platform) {
+            const domainMap = {
+                'csdn': '.csdn.net',
+                'zhihu': '.zhihu.com',
+                'juejin': '.juejin.cn'
+            };
+            const domain = domainMap[platform] || '.csdn.net';
+            
+            const cookies = [];
+            // 按分号分割
+            const pairs = cookieStr.split(';');
+            for (const pair of pairs) {
+                const trimmed = pair.trim();
+                if (!trimmed) continue;
+                
+                const eqIndex = trimmed.indexOf('=');
+                if (eqIndex === -1) continue;
+                
+                const name = trimmed.substring(0, eqIndex).trim();
+                const value = trimmed.substring(eqIndex + 1).trim();
+                
+                if (name) {
+                    cookies.push({ name, value, domain });
+                }
+            }
+            return cookies;
+        }
+        
+        // 执行发布
+        async function doPublish() {
+            const platform = document.getElementById('publishPlatformSelect').value;
+            const cookieStr = document.getElementById('publishCookieInput').value.trim();
+            const statusEl = document.getElementById('publishStatus');
+            
+            if (!cookieStr) {
+                alert('请输入 Cookie');
+                return;
+            }
+            
+            // 解析 Cookie（支持两种格式）
+            let cookies;
+            try {
+                // 尝试 JSON 格式
+                cookies = JSON.parse(cookieStr);
+                if (!Array.isArray(cookies)) {
+                    throw new Error('not array');
+                }
+            } catch (e) {
+                // 尝试原始字符串格式：name=value; name2=value2
+                cookies = parseCookieString(cookieStr, platform);
+                if (cookies.length === 0) {
+                    alert('Cookie 格式错误，请检查输入');
+                    return;
+                }
+            }
+            
+            const title = currentBlogResult.outline?.title || '未命名博客';
+            const content = currentBlogResult.markdown;
+            
+            statusEl.style.display = 'block';
+            statusEl.style.color = '#666';
+            statusEl.textContent = '⏳ 正在发布，请稍候...（约 30-60 秒）';
+            
+            try {
+                const response = await fetch('/api/publish', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        platform,
+                        cookies,
+                        title,
+                        content
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    statusEl.style.color = '#4ECDC4';
+                    if (data.url) {
+                        statusEl.innerHTML = `✅ 发布成功！<a href="${data.url}" target="_blank" style="color: #6366F1;">查看文章</a>`;
+                    } else {
+                        statusEl.textContent = '✅ 发布成功！（请到平台查看）';
+                    }
+                } else {
+                    statusEl.style.color = '#ff6b6b';
+                    statusEl.textContent = '❌ ' + (data.message || '发布失败');
+                }
+            } catch (error) {
+                console.error('发布失败:', error);
+                statusEl.style.color = '#ff6b6b';
+                statusEl.textContent = '❌ 发布失败: ' + error.message;
+            }
+        }
     </script>
 </body>
 </html>

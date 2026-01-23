@@ -3,6 +3,7 @@ Assembler Agent - 文档组装
 """
 
 import logging
+import re
 from typing import Dict, Any, List
 
 from ..prompts.prompt_manager import get_prompt_manager
@@ -24,6 +25,21 @@ class AssemblerAgent:
         初始化 Assembler Agent
         """
         pass
+    
+    def extract_subheadings(self, content: str) -> List[str]:
+        """
+        从章节内容中提取二级标题（### 标题）
+        
+        Args:
+            content: 章节内容
+            
+        Returns:
+            二级标题列表
+        """
+        # 匹配 ### 开头的标题（不匹配 #### 及更多）
+        pattern = r'^###\s+(.+?)$'
+        matches = re.findall(pattern, content, re.MULTILINE)
+        return matches[:3]  # 最多返回 3 个二级标题
     
     def assemble(
         self,
@@ -48,14 +64,26 @@ class AssemblerAgent:
         """
         pm = get_prompt_manager()
         
-        # 1. 生成文章头部
+        # 1. 从章节内容中提取二级标题，构建目录数据
+        toc_sections = []
+        for section in sections:
+            section_title = section.get('title', '')
+            content = section.get('content', '')
+            subheadings = self.extract_subheadings(content)
+            toc_sections.append({
+                'title': section_title,
+                'subheadings': subheadings
+            })
+        
+        # 2. 生成文章头部
         header = pm.render_assembler_header(
             title=outline.get('title', '技术博客'),
             subtitle=outline.get('subtitle', ''),
             reading_time=outline.get('reading_time', 30),
             core_value=outline.get('core_value', ''),
             table_of_contents=outline.get('table_of_contents', []),
-            introduction=outline.get('introduction', '')
+            introduction=outline.get('introduction', ''),
+            sections=toc_sections
         )
         
         # 3. 组装章节内容

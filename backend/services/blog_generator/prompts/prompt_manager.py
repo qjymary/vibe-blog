@@ -246,7 +246,8 @@ class PromptManager:
         reading_time: int,
         core_value: str,
         table_of_contents: list,
-        introduction: str
+        introduction: str,
+        sections: list = None
     ) -> str:
         """渲染文章头部"""
         return self.render(
@@ -256,7 +257,8 @@ class PromptManager:
             reading_time=reading_time,
             core_value=core_value,
             table_of_contents=table_of_contents or [],
-            introduction=introduction
+            introduction=introduction,
+            sections=sections or []
         )
     
     def render_assembler_footer(
@@ -422,6 +424,18 @@ class PromptManager:
             'homepage_generator',
             book=book,
             outline=outline or {}
+        )
+    
+    def render_missing_diagram_detector(
+        self,
+        section_title: str,
+        content: str
+    ) -> str:
+        """渲染缺失图表检测的 Prompt"""
+        return self.render(
+            'missing_diagram_detector',
+            section_title=section_title,
+            content=content
         )
 
 

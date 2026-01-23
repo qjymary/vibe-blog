@@ -317,12 +317,10 @@ class BlogGenerator:
     def _coder_and_artist_node(self, state: SharedState) -> SharedState:
         """代码和配图并行生成节点"""
         from concurrent.futures import ThreadPoolExecutor
-        import copy
         
         logger.info("=== Step 5: 代码和配图并行生成 ===")
         
         # 使用线程池并行执行 coder 和 artist
-        # 注意：state 是共享的，但 coder 和 artist 修改的是不同的字段
         # coder 修改: code_blocks, sections[x].code_ids
         # artist 修改: images, sections[x].image_ids
         # 两者不冲突，可以安全并行
@@ -332,7 +330,7 @@ class BlogGenerator:
             return self.coder.run(state)
         
         def run_artist():
-            logger.info("→ 开始配图生成")
+            logger.info("→ 开始配图生成（含补图检测）")
             return self.artist.run(state)
         
         with ThreadPoolExecutor(max_workers=2) as executor:
@@ -343,7 +341,10 @@ class BlogGenerator:
             coder_future.result()
             artist_future.result()
         
-        logger.info("=== 代码和配图并行生成完成 ===")
+        code_count = len(state.get('code_blocks', []))
+        image_count = len(state.get('images', []))
+        logger.info(f"=== 代码和配图并行生成完成: {code_count} 个代码块, {image_count} 张图片 ===")
+        
         return state
     
     def _reviewer_node(self, state: SharedState) -> SharedState:

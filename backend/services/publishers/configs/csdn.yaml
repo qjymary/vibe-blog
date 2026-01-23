@@ -1,0 +1,91 @@
+# CSDN 平台发布配置
+
+platform:
+  id: csdn
+  name: CSDN
+  editor_url: https://editor.csdn.net/md/
+  cookie_domain: .csdn.net
+
+# 登录检测
+login_check:
+  type: url_not_contains
+  value: login
+
+# 内容上传方式：通过上传 .md 文件
+content_upload:
+  type: file_upload
+  selector: 'input[accept=".md"]'
+  wait_after: 5000
+
+# 发布工作流
+workflow:
+  - action: click
+    name: 打开发布面板
+    selector: .btn-publish
+    wait_after: 3000
+  
+  - action: click
+    name: 点击添加标签按钮
+    selector: .tag__btn-tag
+    wait_after: 2000
+  
+  - action: js_eval
+    name: 选择推荐标签
+    script: |
+      // 在标签弹窗中选择推荐的标签
+      const tags = document.querySelectorAll('.mark_add_tag_right .el-tag');
+      let count = 0;
+      for (const tag of tags) {
+        if (count < 3) {
+          tag.click();
+          count++;
+        }
+      }
+    wait_after: 1000
+  
+  - action: js_eval
+    name: 关闭标签弹窗
+    script: |
+      const mask = document.querySelector('.mark-mask-box-div');
+      if (mask) mask.click();
+    optional: true
+    wait_after: 500
+  
+  - action: js_eval
+    name: 选择封面图片
+    script: |
+      // 选择文章中的第一张图片作为封面
+      const coverImg = document.querySelector('.img-selection-item img, .select-cover');
+      if (coverImg) {
+        coverImg.click();
+      }
+    optional: true
+    wait_after: 3000
+  
+  - action: js_eval
+    name: 确认封面图片上传
+    script: |
+      // 点击图片编辑弹窗中的"确认上传"按钮
+      const confirmBtn = document.querySelector('.vicp-operate-btn');
+      if (confirmBtn) {
+        confirmBtn.click();
+      }
+    optional: true
+    wait_after: 3000
+  
+  - action: click
+    name: 最终发布
+    selector: .btn-b-red
+    wait_after: 20000
+
+# 获取发布后的文章 URL
+result_url:
+  type: element_attribute
+  selector: 'a.toarticle, a[href*="/article/details/"], .success-box a, .el-dialog a[href*="article"], .article-success a'
+  attribute: href
+  wait_seconds: 20
+
+# 脚注配置
+footer:
+  enabled: true
+  text: "\n\n> 本文由 [Vibe-Blog](https://github.com/your-repo/vibe-blog) 自动发布"
